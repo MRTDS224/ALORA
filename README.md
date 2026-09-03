@@ -34,13 +34,10 @@ ALORA/
 │   ├── core/           # Configuration (.env), Moteur Database & Sécurité
 │   ├── models/         # Modèles ORM SQLAlchemy (8 entités métier)
 │   ├── schemas/        # Validation Pydantic v2 (DTOs API)
-│   ├── services/       # Couche Métier (CRUD, S3 Storage, Validation, Stats)
+│   ├── services/       # Couche Métier (CRUD, S3 Storage, FFmpeg, Praat, Export ZIP)
 │   ├── routers/        # Enrouteurs API REST et Pages Web Jinja2
 │   ├── templates/      # Interface Utilisateur HTML5 (Templates Jinja2)
 │   └── main.py         # Point d'entrée de l'application FastAPI
-├── docs/
-│   ├── ALORA_AGENT_BRIEF.md  # Cahier des charges & architecture scientifique
-│   └── PROGRESS.md           # Suivi détaillé de l'avancement du projet
 ├── static/
 │   ├── css/style.css   # System Design CSS Vanilla
 │   └── js/recorder.js  # Enregistreur Web Audio API (Micro Browser)
@@ -99,6 +96,8 @@ uv run uvicorn app.main:app --reload --port 8000
 | **`GET /speakers`** | 🗣️ **Gestion des locuteurs** pseudonymisés & consentement |
 | **`GET /sessions`** | 📅 **Sessions de collecte** (environnement, équipement, météo) |
 | **`GET /prompts`** | 📜 **Prompts & phrases de référence** en langue Susu |
+| **`GET /api/export/corpus`** | 📦 **Exportation Dataset ML (.ZIP)** (Audios 16kHz + metadata CSV + Praat TextGrid + splits train/val/test) |
+| **`GET /api/recordings/{id}/textgrid`** | 🏷️ **Export Praat TextGrid** (IntervalTier pour phrases et annotations de mots) |
 | **`GET /docs`** | 📖 **Documentation Swagger API interactive** |
 
 ---

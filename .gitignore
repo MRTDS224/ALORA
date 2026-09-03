@@ -43,3 +43,6 @@ postgres_data/
 .coverage
 htmlcov/
 .pytest_cache/
+
+# Documentation & Local Notes
+docs/
