@@ -87,7 +87,7 @@ def stream_audio(
         raise HTTPException(status_code=404, detail="Enregistrement non trouvé")
 
     try:
-        stream = storage_service.get_object_stream(rec.audio_object_key)
+        stream = storage_service.get_object_stream(str(rec.audio_object_key))
         media_type = f"audio/{rec.format}" if rec.format else "audio/wav"
         return StreamingResponse(stream.stream(32768), media_type=media_type)
     except Exception as e:
