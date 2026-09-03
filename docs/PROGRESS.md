@@ -18,6 +18,9 @@ Ce document permet de suivre l'état d'avancement des tâches réalisées et res
 - [x] **Phase 6 : Interface & API de Transcription (Priorité 7)**
 - [x] **Phase 7 : Tableaux de Bord (Dashboard) (Priorité 8)**
 - [x] **Phase 8 : Finitions UI/CSS & Validation Complète (Priorité 9)**
+- [x] **Phase 9 : Prétraitement FFmpeg & Normalisation Audio (WAV 16kHz Mono)**
+- [x] **Phase 10 : Module de Segmentation & Export Praat TextGrid (`.TextGrid`)**
+- [x] **Phase 11 : Module d'Exportation du Corpus ML/ASR (ZIP & Splits Train/Val/Test)**
 
 ---
 
@@ -33,7 +36,7 @@ Ce document permet de suivre l'état d'avancement des tâches réalisées et res
 - Initialisation du dépôt Git (`main`).
 - Initialisation du projet Python 3.12 avec `uv` (`pyproject.toml`, `uv.lock`).
 - Configuration de `.gitignore` et `.env.example`.
-- Installation des dépendances majeures : `fastapi`, `uvicorn`, `sqlalchemy`, `alembic`, `psycopg2-binary`, `minio`, `jinja2`, `python-multipart`, `pydantic-settings`, `pytest`, `httpx`.
+- Installation des dépendances majeures : `fastapi`, `uvicorn`, `sqlalchemy`, `alembic`, `psycopg2-binary`, `minio`, `jinja2`, `python-multipart`, `pydantic-settings`, `pytest`, `httpx`, `ffmpeg-python`.
 
 ### 3. Infrastructure Docker & Schéma de Base de Données (Phase 1)
 - Création du fichier `docker-compose.yml` avec services PostgreSQL 16 (port 5434) et MinIO (ports 9000 & 9001).
@@ -65,58 +68,26 @@ Ce document permet de suivre l'état d'avancement des tâches réalisées et res
 - API REST (`/api/transcriptions`).
 - Studio de transcription (`/transcriptions/{recording_id}`) avec synchronisation audio, texte de référence, enregistrement des versions et statuts (`draft`, `reviewed`, `accepted`).
 
-### 9. Tableau de Bord (Dashboard) (Phase 7)
+### 9. Tableau de Bord & Exportation (Phase 7 & 11)
 - Service de calcul des statistiques globales du corpus (`app/services/stats.py`).
-- Interface de garde (`/`) avec indicateurs clés (locuteurs, durée cumulée, volumes audio, état du pipeline et activité récente).
+- Interface de garde (`/`) avec indicateurs clés et bouton **"📦 Exporter le Corpus (.ZIP)"**.
 
-### 10. Tests d'Intégration & Recette ("Definition of Done") (Phase 8)
-- Rédaction du banc de tests automatisés de bout en bout (`tests/test_end_to_end.py`).
-- Validation complète de la "Definition of Done" (PostgreSQL, MinIO S3, API REST, Web App FastAPI Jinja2).
+### 10. Prétraitement FFmpeg, Segmentation & Export Praat (Phase 9, 10 & 11)
+- **Normalisation FFmpeg :** Ré-échantillonnage automatique de tout enregistrement reçu en **WAV 16 kHz Mono PCM 16-bit** (`app/services/recording.py`).
+- **Générateur Praat `.TextGrid` :** Exportation des segments et annotations de mots sous forme de fichier d'annotation Praat (`GET /api/recordings/{id}/textgrid`).
+- **Exportateur Dataset ML :** Génération à la volée de l'archive ZIP du corpus complet avec découpage en jeux `train` (80%), `validation` (10%), `test` (10%) (`GET /api/export/corpus`).
 
 ---
 
-## ⏳ Ce qui reste à faire
+## ⏳ Suivi des Phasing
 
-### 1. Initialisation du projet
-- [x] Initialiser le dépôt Git (`git init`).
-- [x] Initialiser le projet Python avec `uv` (Python 3.12).
-- [x] Créer le fichier `.gitignore` et la structure initiale des dossiers.
-- [x] Premier commit Git.
-
-### 2. Infrastructure & Base de données
-- [x] Créer `docker-compose.yml` (PostgreSQL 16 + MinIO).
-- [x] Configurer la connexion SQLAlchemy dans `app/core/database.py` et les variables d'environnement dans `app/core/config.py`.
-- [x] Définir les 8 modèles SQLAlchemy (`speakers`, `sessions`, `prompts`, `recordings`, `transcriptions`, `quality_annotations`, `segments`, `word_annotations`).
-- [x] Initialiser Alembic et générer la première migration SQL.
-- [x] Commiter l'infrastructure DB.
-
-### 3. API FastAPI & MinIO
-- [x] Structurer l'application FastAPI (`app/main.py`).
-- [x] Développer le service de stockage S3/MinIO (`app/services/storage.py`) pour la gestion des audios sous `raw/YYYY/MM/DD/REC_xxx.wav`.
-- [x] Tester l'interconnexion FastAPI - MinIO - PostgreSQL.
-- [x] Commiter la couche API & MinIO.
-
-### 4. Entités Métier (Locuteurs, Sessions, Prompts)
-- [x] Créer les schémas Pydantic et endpoints API CRUD pour Speakers, Sessions, Prompts.
-- [x] Implémenter les templates HTML Jinja2 (`/speakers`, `/sessions`, `/prompts`).
-- [x] Commiter par module (Speakers, Sessions, Prompts).
-
-### 5. Collecte & Upload Audio
-- [x] Créer la page web de collecte `/record` (Enregistreur navigateur Web Audio API, chronomètre, prévisualisation).
-- [x] Endpoint `POST /api/recordings` (upload audio MinIO + enregistrement métadonnées PostgreSQL).
-- [x] Commiter la fonctionnalité de collecte.
-
-### 6. Validation & Qualité Audio
-- [x] Développer la page `/recordings` et `/recordings/{id}` (Lecteur audio, formulaire de notation de qualité).
-- [x] Implémenter le service d'annotation de qualité (`app/services/quality.py`) et les endpoints API `/validate` et `/reject`.
-- [x] Commiter l'interface de validation.
-
-### 7. Transcription & Versionnement
-- [x] Développer la page `/transcriptions/{recording_id}` (Interface de saisie et gestion du versionnement des transcriptions).
-- [x] Implémenter les endpoints API de transcription et la sauvegarde des versions.
-- [x] Commiter le module de transcription.
-
-### 8. Dashboard & Expérience Utilisateur
-- [x] Développer le tableau de bord `/` avec métriques du corpus (nombre de locuteurs, heures d'enregistrement, statut des traitements).
+- [x] Initialisation & Dépôt Git (`main`).
+- [x] Infrastructure Docker (PostgreSQL 16 & MinIO S3).
+- [x] Schéma SQLAlchemy & Migrations Alembic.
+- [x] Métier (Locuteurs, Sessions, Prompts, Audios, Quality, Transcriptions, Segments).
+- [x] Pipeline de Prétraitement FFmpeg 16kHz Mono.
+- [x] Générateur d'Annotation Linguistique Praat TextGrid.
+- [x] Module d'Exportation ZIP (Splits Train / Validation / Test).
+- [x] Banc de Tests d'Intégration d'End-to-End validé à 100%.
 - [x] Peaufiner le CSS Vanilla pour un usage fluide sur le terrain (tablettes/laptops).
 - [x] Effectuer le test d'intégration de bout en bout ("Definition of Done").
