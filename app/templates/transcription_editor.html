@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Transcription {{ recording.recording_code }} — ALORA{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2 class="page-title">Studio de Transcription : {{ recording.recording_code }}</h2>
+    <p class="subtitle">Saisie orthographique, contrôle audio & historisation des versions</p>
+  </div>
+  <a href="/transcriptions" class="btn btn-secondary">← Liste des Transcriptions</a>
+</div>
+
+<div class="form-grid">
+  <!-- Lecteur Audio & Prompt de Référence -->
+  <div class="card">
+    <h3 style="margin-bottom: 1rem;">1. Écoute Audio & Référence</h3>
+
+    <div style="background: var(--neutral-900); color: white; padding: 1.5rem; border-radius: 8px; text-align: center; margin-bottom: 1.5rem;">
+      <audio src="/api/recordings/{{ recording.id }}/stream" controls style="width: 100%; margin-bottom: 0.5rem;"></audio>
+      <div style="font-size: 0.85rem; color: var(--neutral-300);">
+        Locuteur : <strong>{{ recording.session.speaker.speaker_code if recording.session and recording.session.speaker else '-' }}</strong> • 
+        Durée : <strong>{{ recording.duration_seconds|round(2) if recording.duration_seconds else '-' }}s</strong>
+      </div>
+    </div>
+
+    {% if recording.prompt %}
+    <div style="background: var(--primary-light); border: 1px solid var(--neutral-300); padding: 1.25rem; border-radius: 8px; margin-bottom: 1rem;">
+      <span class="badge badge-uploaded" style="margin-bottom: 0.5rem;">Prompt de Référence [{{ recording.prompt.prompt_code }}]</span>
+      <h4 style="color: var(--primary); margin-bottom: 0.5rem;">{{ recording.prompt.title }}</h4>
+      <p style="font-size: 1.15rem; font-weight: 700; color: var(--neutral-900); font-style: italic; margin-bottom: 0.5rem;">
+        « {{ recording.prompt.content }} »
+      </p>
+      {% if recording.prompt.description %}
+      <p style="color: var(--neutral-600); font-size: 0.9rem;">Traduction / Note : {{ recording.prompt.description }}</p>
+      {% endif %}
+    </div>
+    {% else %}
+    <div style="background: var(--neutral-100); padding: 1rem; border-radius: 8px; color: var(--neutral-600); font-style: italic;">
+      Note : Il s'agit d'un enregistrement de parole libre (aucun prompt de référence).
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Editeur de Transcription -->
+  <div class="card">
+    <h3 style="margin-bottom: 1rem;">2. Saisie de la Transcription</h3>
+
+    <form action="/transcriptions/{{ recording.id }}" method="POST">
+      <div class="form-group">
+        <label for="transcription_text">Texte en Langue Susu *</label>
+        <textarea id="transcription_text" name="transcription_text" class="form-control" style="min-height: 140px; font-size: 1.1rem; line-height: 1.6;" placeholder="Saisir la transcription exacte en Susu..." required>{% if latest_transcription %}{{ latest_transcription.text }}{% elif recording.prompt %}{{ recording.prompt.content }}{% endif %}</textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="transcriber">Transcripteur / Annotateur</label>
+        <input type="text" id="transcriber" name="transcriber" class="form-control" placeholder="Nom ou ID du transcripteur" value="{{ latest_transcription.transcriber if latest_transcription else '' }}">
+      </div>
+
+      <div class="form-group">
+        <label for="status">Statut de la version</label>
+        <select id="status" name="status" class="form-control">
+          <option value="draft">Brouillon (Draft)</option>
+          <option value="reviewed">Revu (Reviewed)</option>
+          <option value="accepted">Validé & Accepté (Accepted)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="notes">Notes / Difficultés de transcription</label>
+        <textarea id="notes" name="notes" class="form-control" placeholder="Mot inaudible, variante dialectale, hésitation..."></textarea>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width: 100%; font-size: 1rem; padding: 0.75rem;">
+        💾 Enregistrer la Version (Auto-Incrément Version)
+      </button>
+    </form>
+
+    <!-- Historique des versions de transcription -->
+    {% if transcriptions %}
+    <div style="margin-top: 2rem; border-top: 1px solid var(--neutral-200); padding-top: 1rem;">
+      <h4 style="margin-bottom: 0.75rem;">Historique des Versions ({{ transcriptions|length }}) :</h4>
+      {% for t in transcriptions %}
+      <div style="background: white; border: 1px solid var(--neutral-200); border-radius: 6px; padding: 0.85rem; margin-bottom: 0.75rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+          <strong>Version {{ t.version }}</strong>
+          <span class="badge badge-{{ t.transcription_status }}">{{ t.transcription_status }}</span>
+        </div>
+        <p style="font-style: italic; font-size: 1rem; color: var(--neutral-900); margin-bottom: 0.4rem;">
+          « {{ t.text }} »
+        </p>
+        <div style="font-size: 0.8rem; color: var(--neutral-600);">
+          Par {{ t.transcriber or 'Anonyme' }} • Le {{ t.created_at.strftime('%d/%m/%Y %H:%M') }}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

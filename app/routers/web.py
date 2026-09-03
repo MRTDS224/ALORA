@@ -190,8 +190,60 @@ def handle_evaluate_recording(
         reviewer=reviewer,
         notes=notes
     )
-    quality_service.create_quality_annotation(db, qual_in, recording_status=target_status)
-    return RedirectResponse(url=f"/recordings/{recording_id}", status_code=303)
+# --- TRANSCRIPTIONS ---
+@web_router.get("/transcriptions", response_class=HTMLResponse)
+def page_transcriptions(request: Request, db: Session = Depends(get_db)):
+    recordings = recording_service.get_recordings(db)
+    return templates.TemplateResponse("transcriptions_list.html", {
+        "request": request,
+        "recordings": recordings
+    })
+
+@web_router.get("/transcriptions/{recording_id}", response_class=HTMLResponse)
+def page_transcription_editor(
+    request: Request,
+    recording_id: str,
+    db: Session = Depends(get_db)
+):
+    from app.services import transcription as transcription_service
+    rec_uuid = UUID(recording_id)
+    rec = recording_service.get_recording_by_id(db, rec_uuid)
+    if not rec:
+        return RedirectResponse(url="/transcriptions", status_code=303)
+
+    transcriptions = transcription_service.get_transcriptions_by_recording(db, rec_uuid)
+    latest_transcription = transcriptions[0] if transcriptions else None
+
+    return templates.TemplateResponse("transcription_editor.html", {
+        "request": request,
+        "recording": rec,
+        "transcriptions": transcriptions,
+        "latest_transcription": latest_transcription
+    })
+
+@web_router.post("/transcriptions/{recording_id}")
+def handle_save_transcription(
+    recording_id: str,
+    transcription_text: str = Form(...),
+    transcriber: Optional[str] = Form(None),
+    status: str = Form("draft"),
+    notes: Optional[str] = Form(None),
+    db: Session = Depends(get_db)
+):
+    from app.schemas.transcription import TranscriptionCreate
+    from app.services import transcription as transcription_service
+
+    rec_uuid = UUID(recording_id)
+    t_in = TranscriptionCreate(
+        recording_id=rec_uuid,
+        transcription_text=transcription_text,
+        transcriber=transcriber,
+        language_code="sus",
+        status=status,
+        notes=notes
+    )
+    transcription_service.create_transcription(db, t_in)
+    return RedirectResponse(url=f"/transcriptions/{recording_id}", status_code=303)
 
 
 # --- RECORD (COLLECTE) ---

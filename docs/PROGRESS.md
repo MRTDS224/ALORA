@@ -15,7 +15,7 @@ Ce document permet de suivre l'état d'avancement des tâches réalisées et res
 - [x] **Phase 3 : Gestion des Locuteurs, Sessions et Prompts (Priorité 4)**
 - [x] **Phase 4 : Collecte Audio & Upload Browser (Priorité 5)**
 - [x] **Phase 5 : Interface & API de Validation Audio (Priorité 6)**
-- [ ] **Phase 6 : Interface & API de Transcription (Priorité 7)**
+- [x] **Phase 6 : Interface & API de Transcription (Priorité 7)**
 - [ ] **Phase 7 : Tableaux de Bord (Dashboard) (Priorité 8)**
 - [ ] **Phase 8 : Finitions UI/CSS & Validation Complète (Priorité 9)**
 
@@ -60,6 +60,11 @@ Ce document permet de suivre l'état d'avancement des tâches réalisées et res
 - API de validation et de rejet (`POST /api/recordings/{id}/validate` et `/reject`).
 - Interfaces web de listing filtré (`/recordings`) et fiche d'évaluation détaillée (`/recordings/{id}`) avec streaming audio et historique des revues.
 
+### 8. Transcription & Historique des Versions (Phase 6)
+- Schémas Pydantic (`app/schemas/transcription.py`) et service de versionnement des transcriptions (`app/services/transcription.py`).
+- API REST (`/api/transcriptions`).
+- Studio de transcription (`/transcriptions/{recording_id}`) avec synchronisation audio, texte de référence, enregistrement des versions et statuts (`draft`, `reviewed`, `accepted`).
+
 ---
 
 ## ⏳ Ce qui reste à faire
@@ -99,9 +104,9 @@ Ce document permet de suivre l'état d'avancement des tâches réalisées et res
 - [x] Commiter l'interface de validation.
 
 ### 7. Transcription & Versionnement
-- [ ] Développer la page `/transcriptions/{recording_id}` (Interface de saisie et gestion du versionnement des transcriptions).
-- [ ] Endpoints API associés.
-- [ ] Commiter la fonctionnalité de transcription.
+- [x] Développer la page `/transcriptions/{recording_id}` (Interface de saisie et gestion du versionnement des transcriptions).
+- [x] Implémenter les endpoints API de transcription et la sauvegarde des versions.
+- [x] Commiter le module de transcription.
 
 ### 8. Dashboard & Expérience Utilisateur
 - [ ] Développer le tableau de bord `/` avec métriques du corpus (nombre de locuteurs, heures d'enregistrement, statut des traitements).

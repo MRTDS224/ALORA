@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Module de Transcription — ALORA{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2 class="page-title">Transcription Orthographique Susu</h2>
+    <p class="subtitle">Saisie textuelle et suivi des versions de transcription du corpus oral.</p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Code Audio</th>
+          <th>Locuteur</th>
+          <th>Prompt Référence</th>
+          <th>Dernière Transcription</th>
+          <th>Versions</th>
+          <th>Statut Audio</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rec in recordings %}
+        <tr>
+          <td><strong>{{ rec.recording_code }}</strong></td>
+          <td>{{ rec.session.speaker.speaker_code if rec.session and rec.session.speaker else '-' }}</td>
+          <td>
+            {% if rec.prompt %}
+              <strong>{{ rec.prompt.title }}</strong><br>
+              <small style="color: var(--neutral-800); font-style: italic;">« {{ rec.prompt.content|truncate(40) }} »</small>
+            {% else %}
+              <span style="color: var(--neutral-600);">Parole libre</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if rec.transcriptions %}
+              <span style="font-weight: 600; color: var(--neutral-900);">« {{ rec.transcriptions[0].text|truncate(50) }} »</span><br>
+              <small style="color: var(--neutral-600);">Par {{ rec.transcriptions[0].transcriber or 'Anonyme' }} (v{{ rec.transcriptions[0].version }})</small>
+            {% else %}
+              <span style="color: var(--warning); font-style: italic;">Non transcrit</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="badge badge-uploaded">{{ rec.transcriptions|length }} version(s)</span>
+          </td>
+          <td>
+            <span class="badge badge-{{ rec.recording_status }}">{{ rec.recording_status }}</span>
+          </td>
+          <td>
+            <a href="/transcriptions/{{ rec.id }}" class="btn btn-primary btn-sm">✍️ Transcrire</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" style="text-align: center; color: var(--neutral-600);">Aucun enregistrement disponible pour transcription.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
