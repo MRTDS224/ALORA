@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Tableau de Bord — ALORA Susu Corpus{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2 class="page-title">Tableau de Bord du Corpus Susu</h2>
+    <p class="subtitle">Vue d'ensemble de la collecte orale, de la validation acoustique et des transcriptions.</p>
+  </div>
+  <a href="/record" class="btn btn-primary" style="font-size: 1rem; padding: 0.75rem 1.5rem;">🎙️ Démarrer une Collecte</a>
+</div>
+
+<!-- Stats Grid -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="value">{{ stats.total_speakers }}</div>
+    <div class="label">Locuteurs Pseudonymisés</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="value">{{ stats.total_recordings }}</div>
+    <div class="label">Audios Collectés</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="value">{{ stats.total_duration_minutes }} min</div>
+    <div class="label">Durée Totale ({{ stats.total_duration_hours }} hrs)</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="value">{{ stats.total_transcriptions }}</div>
+    <div class="label">Transcriptions Versionnées</div>
+  </div>
+</div>
+
+<div class="form-grid">
+  <!-- État du Pipeline Audio -->
+  <div class="card">
+    <h3 style="margin-bottom: 1rem;">Pipeline de Qualité Audio</h3>
+    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; background: var(--neutral-100); padding: 0.75rem 1rem; border-radius: 6px;">
+        <span>📥 En attente de validation (Uploaded)</span>
+        <span class="badge badge-uploaded" style="font-size: 0.9rem;">{{ stats.status_counts.uploaded }}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; background: var(--neutral-100); padding: 0.75rem 1rem; border-radius: 6px;">
+        <span>✅ Audios Qualité Validée</span>
+        <span class="badge badge-validated" style="font-size: 0.9rem;">{{ stats.status_counts.validated }}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; background: var(--neutral-100); padding: 0.75rem 1rem; border-radius: 6px;">
+        <span>✍️ Audios Transcrits</span>
+        <span class="badge badge-transcribed" style="font-size: 0.9rem;">{{ stats.status_counts.transcribed }}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; background: var(--neutral-100); padding: 0.75rem 1rem; border-radius: 6px;">
+        <span>❌ Audios Rejetés (Bruit/Saturation)</span>
+        <span class="badge badge-rejected" style="font-size: 0.9rem;">{{ stats.status_counts.rejected }}</span>
+      </div>
+    </div>
+
+    <div style="margin-top: 1.5rem;">
+      <a href="/recordings" class="btn btn-secondary" style="width: 100%; text-align: center;">Consulter les Audios à Valider</a>
+    </div>
+  </div>
+
+  <!-- Dernières Collectes -->
+  <div class="card" style="grid-column: span 2;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <h3>Derniers Enregistrements</h3>
+      <a href="/recordings" class="btn btn-secondary btn-sm">Voir tout</a>
+    </div>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Locuteur</th>
+            <th>Durée</th>
+            <th>Statut</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for rec in stats.recent_recordings %}
+          <tr>
+            <td><strong>{{ rec.recording_code }}</strong></td>
+            <td>{{ rec.session.speaker.speaker_code if rec.session and rec.session.speaker else '-' }}</td>
+            <td>{{ rec.duration_seconds|round(1) if rec.duration_seconds else '-' }}s</td>
+            <td><span class="badge badge-{{ rec.recording_status }}">{{ rec.recording_status }}</span></td>
+            <td>
+              <a href="/recordings/{{ rec.id }}" class="btn btn-secondary btn-sm">Évaluer</a>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="5" style="text-align: center; color: var(--neutral-600);">Aucun enregistrement récent.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

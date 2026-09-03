@@ -16,7 +16,7 @@ Ce document permet de suivre l'état d'avancement des tâches réalisées et res
 - [x] **Phase 4 : Collecte Audio & Upload Browser (Priorité 5)**
 - [x] **Phase 5 : Interface & API de Validation Audio (Priorité 6)**
 - [x] **Phase 6 : Interface & API de Transcription (Priorité 7)**
-- [ ] **Phase 7 : Tableaux de Bord (Dashboard) (Priorité 8)**
+- [x] **Phase 7 : Tableaux de Bord (Dashboard) (Priorité 8)**
 - [ ] **Phase 8 : Finitions UI/CSS & Validation Complète (Priorité 9)**
 
 ---
@@ -65,6 +65,10 @@ Ce document permet de suivre l'état d'avancement des tâches réalisées et res
 - API REST (`/api/transcriptions`).
 - Studio de transcription (`/transcriptions/{recording_id}`) avec synchronisation audio, texte de référence, enregistrement des versions et statuts (`draft`, `reviewed`, `accepted`).
 
+### 9. Tableau de Bord (Dashboard) (Phase 7)
+- Service de calcul des statistiques globales du corpus (`app/services/stats.py`).
+- Interface de garde (`/`) avec indicateurs clés (locuteurs, durée cumulée, volumes audio, état du pipeline et activité récente).
+
 ---
 
 ## ⏳ Ce qui reste à faire
@@ -109,6 +113,6 @@ Ce document permet de suivre l'état d'avancement des tâches réalisées et res
 - [x] Commiter le module de transcription.
 
 ### 8. Dashboard & Expérience Utilisateur
-- [ ] Développer le tableau de bord `/` avec métriques du corpus (nombre de locuteurs, heures d'enregistrement, statut des traitements).
+- [x] Développer le tableau de bord `/` avec métriques du corpus (nombre de locuteurs, heures d'enregistrement, statut des traitements).
 - [ ] Peaufiner le CSS Vanilla pour un usage fluide sur le terrain (tablettes/laptops).
 - [ ] Effectuer le test d'intégration de bout en bout ("Definition of Done").

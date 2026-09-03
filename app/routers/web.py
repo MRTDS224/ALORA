@@ -17,6 +17,17 @@ templates = Jinja2Templates(directory="app/templates")
 
 web_router = APIRouter(tags=["Web Pages"])
 
+# --- DASHBOARD ---
+@web_router.get("/", response_class=HTMLResponse)
+def page_dashboard(request: Request, db: Session = Depends(get_db)):
+    from app.services import stats as stats_service
+    stats = stats_service.get_dashboard_stats(db)
+    return templates.TemplateResponse("dashboard.html", {
+        "request": request,
+        "stats": stats
+    })
+
+
 # --- SPEAKERS ---
 @web_router.get("/speakers", response_class=HTMLResponse)
 def page_speakers(request: Request, db: Session = Depends(get_db)):
