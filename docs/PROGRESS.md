@@ -11,7 +11,7 @@ Ce document permet de suivre l'état d'avancement des tâches réalisées et res
 - [x] **Lecture et analyse du brief** (`docs/ALORA_AGENT_BRIEF.md`)
 - [x] **Phase 0 : Initialisation & Environnement (`uv` Python 3.12 + Git)**
 - [x] **Phase 1 : Infrastructure & Modèles PostgreSQL + Alembic (Priorités 1 & 2)**
-- [ ] **Phase 2 : FastAPI & Service de Stockage MinIO (Priorités 2 & 3)**
+- [x] **Phase 2 : FastAPI & Service de Stockage MinIO (Priorités 2 & 3)**
 - [ ] **Phase 3 : Gestion des Locuteurs, Sessions et Prompts (Priorité 4)**
 - [ ] **Phase 4 : Collecte Audio & Upload Browser (Priorité 5)**
 - [ ] **Phase 5 : Interface & API de Validation Audio (Priorité 6)**
@@ -41,6 +41,10 @@ Ce document permet de suivre l'état d'avancement des tâches réalisées et res
 - Création des 8 modèles SQLAlchemy (`speakers`, `sessions`, `prompts`, `recordings`, `transcriptions`, `quality_annotations`, `segments`, `word_annotations`).
 - Initialisation d'Alembic et exécution de la première migration SQL (`defe874d90ca_initial_schema.py`).
 
+### 4. FastAPI & Service de Stockage MinIO (Phase 2)
+- Implémentation du service S3/MinIO (`app/services/storage.py`) gérant la création automatique du bucket `alora-storage` et l'organisation des objets sous `raw/YYYY/MM/DD/REC_code.wav`.
+- Structure de l'application FastAPI (`app/main.py`) avec gestion du cycle de vie (lifespan), endpoint de santé (`/health`), fichiers statiques CSS (`static/css/style.css`) et layout Jinja2 (`app/templates/base.html`).
+
 ---
 
 ## ⏳ Ce qui reste à faire
@@ -59,10 +63,10 @@ Ce document permet de suivre l'état d'avancement des tâches réalisées et res
 - [x] Commiter l'infrastructure DB.
 
 ### 3. API FastAPI & MinIO
-- [ ] Structurer l'application FastAPI (`app/main.py`).
-- [ ] Développer le service de stockage S3/MinIO (`app/services/storage.py`) pour la gestion des audios sous `raw/YYYY/MM/DD/REC_xxx.wav`.
-- [ ] Tester l'interconnexion FastAPI - MinIO - PostgreSQL.
-- [ ] Commiter la couche API & MinIO.
+- [x] Structurer l'application FastAPI (`app/main.py`).
+- [x] Développer le service de stockage S3/MinIO (`app/services/storage.py`) pour la gestion des audios sous `raw/YYYY/MM/DD/REC_xxx.wav`.
+- [x] Tester l'interconnexion FastAPI - MinIO - PostgreSQL.
+- [x] Commiter la couche API & MinIO.
 
 ### 4. Entités Métier (Locuteurs, Sessions, Prompts)
 - [ ] Créer les schémas Pydantic et endpoints API CRUD pour Speakers, Sessions, Prompts.
