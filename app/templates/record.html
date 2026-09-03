@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Collecte Audio (Record) — ALORA{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2 class="page-title">🎙️ Collecte de la Parole Susu</h2>
+    <p class="subtitle">Session de production orale • Capture directe navigateur -> MinIO S3 -> PostgreSQL</p>
+  </div>
+</div>
+
+<div class="form-grid">
+  <!-- Sélection Session et Prompt -->
+  <div class="card">
+    <h3 style="margin-bottom: 1rem;">1. Contexte de Collecte</h3>
+    
+    <div class="form-group">
+      <label for="session_id">Session d'Enregistrement *</label>
+      <select id="session_id" name="session_id" class="form-control" onchange="updateContextInfo()">
+        <option value="">-- Sélectionner une Session --</option>
+        {% for sess in sessions %}
+        <option value="{{ sess.id }}" {% if selected_session_id == sess.id|string %}selected{% endif %}>
+          {{ sess.session_code }} — Locuteur {{ sess.speaker.speaker_code if sess.speaker else 'Inconnu' }} ({{ sess.environment or 'normal' }})
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="prompt_id">Prompt / Stimulus (Optionnel pour parole libre)</label>
+      <select id="prompt_id" name="prompt_id" class="form-control" onchange="onPromptChange()">
+        <option value="">-- Parole Spontanée / Libre (Aucun prompt) --</option>
+        {% for p in prompts %}
+        <option value="{{ p.id }}" data-content="{{ p.content }}" data-title="{{ p.title }}" data-desc="{{ p.description or '' }}" data-type="{{ p.prompt_type }}" {% if selected_prompt_id == p.id|string %}selected{% endif %}>
+          [{{ p.prompt_code }}] {{ p.title }} ({{ p.prompt_type }})
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Affichage du Prompt Sélectionné -->
+    <div id="promptBox" style="background: var(--primary-light); border: 1px solid var(--neutral-300); border-radius: 8px; padding: 1.25rem; margin-top: 1.5rem; display: none;">
+      <span id="promptBadge" class="badge badge-uploaded" style="margin-bottom: 0.5rem;">Sentence</span>
+      <h4 id="promptTitle" style="color: var(--primary); margin-bottom: 0.5rem;">Titre du prompt</h4>
+      <p id="promptContent" style="font-size: 1.25rem; font-weight: 700; color: var(--neutral-900); font-style: italic; margin-bottom: 0.5rem;">
+        Content text in Susu
+      </p>
+      <p id="promptDesc" style="color: var(--neutral-600); font-size: 0.9rem;"></p>
+    </div>
+  </div>
+
+  <!-- Studio Enregistreur Browser -->
+  <div class="card" style="grid-column: span 2;">
+    <h3 style="margin-bottom: 1rem;">2. Studio d'Enregistrement</h3>
+
+    <div class="recorder-box">
+      <div class="recording-timer" id="timerDisplay">00:00</div>
+      
+      <div style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 1.5rem;">
+        <button type="button" id="btnRecord" class="btn btn-danger" style="font-size: 1.1rem; padding: 0.75rem 1.5rem;">
+          🔴 Enregistrer
+        </button>
+        <button type="button" id="btnStop" class="btn btn-secondary" style="font-size: 1.1rem; padding: 0.75rem 1.5rem;" disabled>
+          ⏹️ Arrêter
+        </button>
+      </div>
+
+      <div style="max-width: 400px; margin: 0 auto 1.5rem auto;">
+        <audio id="audioPreview" controls style="width: 100%; display: none;"></audio>
+      </div>
+
+      <button type="button" id="btnUpload" class="btn btn-primary" style="font-size: 1rem; padding: 0.75rem 2rem;" disabled>
+        📤 Envoyer la donnée (MinIO + PostgreSQL)
+      </button>
+
+      <div id="statusMsg" style="margin-top: 1.5rem; font-size: 0.95rem;"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/recorder.js"></script>
+<script>
+  function onPromptChange() {
+    const select = document.getElementById("prompt_id");
+    const selectedOption = select.options[select.selectedIndex];
+    const box = document.getElementById("promptBox");
+
+    if (select.value) {
+      document.getElementById("promptTitle").textContent = selectedOption.getAttribute("data-title");
+      document.getElementById("promptContent").textContent = "« " + selectedOption.getAttribute("data-content") + " »";
+      document.getElementById("promptDesc").textContent = selectedOption.getAttribute("data-desc") ? "Traduction : " + selectedOption.getAttribute("data-desc") : "";
+      document.getElementById("promptBadge").textContent = selectedOption.getAttribute("data-type");
+      box.style.display = "block";
+    } else {
+      box.style.display = "none";
+    }
+  }
+
+  // Trigger on load
+  document.addEventListener("DOMContentLoaded", () => {
+    onPromptChange();
+  });
+</script>
+{% endblock %}

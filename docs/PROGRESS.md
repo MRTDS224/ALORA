@@ -13,7 +13,7 @@ Ce document permet de suivre l'état d'avancement des tâches réalisées et res
 - [x] **Phase 1 : Infrastructure & Modèles PostgreSQL + Alembic (Priorités 1 & 2)**
 - [x] **Phase 2 : FastAPI & Service de Stockage MinIO (Priorités 2 & 3)**
 - [x] **Phase 3 : Gestion des Locuteurs, Sessions et Prompts (Priorité 4)**
-- [ ] **Phase 4 : Collecte Audio & Upload Browser (Priorité 5)**
+- [x] **Phase 4 : Collecte Audio & Upload Browser (Priorité 5)**
 - [ ] **Phase 5 : Interface & API de Validation Audio (Priorité 6)**
 - [ ] **Phase 6 : Interface & API de Transcription (Priorité 7)**
 - [ ] **Phase 7 : Tableaux de Bord (Dashboard) (Priorité 8)**
@@ -50,6 +50,11 @@ Ce document permet de suivre l'état d'avancement des tâches réalisées et res
 - Implémentation des services CRUD avec génération automatique des codes pseudonymisés (`SPK_xxxxxx`, `SES_xxxxxx`, `PRM_xxxxxx`).
 - Création des routes API (`/api/speakers`, `/api/sessions`, `/api/prompts`) et interfaces Web Jinja2 (`/speakers`, `/sessions`, `/prompts`).
 
+### 6. Collecte Audio & Enregistreur Web (Phase 4)
+- Création de l'enregistreur Web Audio API navigateur (`static/js/recorder.js`) avec enregistrement live, chronomètre et prévisualisation.
+- Implémentation du service d'enregistrement (`app/services/recording.py`) et des endpoints API (`POST /api/recordings` et `GET /api/recordings/{id}/stream`).
+- Interface de collecte web (`/record`) permettant de lier session, prompt et fichier audio vers MinIO S3 + métadonnées PostgreSQL.
+
 ---
 
 ## ⏳ Ce qui reste à faire
@@ -79,9 +84,9 @@ Ce document permet de suivre l'état d'avancement des tâches réalisées et res
 - [x] Commiter par module (Speakers, Sessions, Prompts).
 
 ### 5. Collecte & Upload Audio
-- [ ] Créer la page web de collecte `/record` (Enregistreur navigateur Web Audio API, chronomètre, prévisualisation).
-- [ ] Endpoint `POST /api/recordings` (upload audio MinIO + enregistrement métadonnées PostgreSQL).
-- [ ] Commiter la fonctionnalité de collecte.
+- [x] Créer la page web de collecte `/record` (Enregistreur navigateur Web Audio API, chronomètre, prévisualisation).
+- [x] Endpoint `POST /api/recordings` (upload audio MinIO + enregistrement métadonnées PostgreSQL).
+- [x] Commiter la fonctionnalité de collecte.
 
 ### 6. Validation & Qualité Audio
 - [ ] Développer la page `/recordings` et `/recordings/{id}` (Lecteur audio, formulaire de notation de qualité).

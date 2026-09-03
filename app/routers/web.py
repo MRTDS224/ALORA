@@ -123,3 +123,22 @@ def handle_create_prompt(
 def handle_toggle_prompt(prompt_id: str, db: Session = Depends(get_db)):
     prompt_service.toggle_prompt_active(db, UUID(prompt_id))
     return RedirectResponse(url="/prompts", status_code=303)
+
+
+# --- RECORD (COLLECTE) ---
+@web_router.get("/record", response_class=HTMLResponse)
+def page_record(
+    request: Request,
+    session_id: Optional[str] = None,
+    prompt_id: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    sessions = session_service.get_sessions(db)
+    prompts = prompt_service.get_prompts(db, active_only=True)
+    return templates.TemplateResponse("record.html", {
+        "request": request,
+        "sessions": sessions,
+        "prompts": prompts,
+        "selected_session_id": session_id,
+        "selected_prompt_id": prompt_id
+    })
