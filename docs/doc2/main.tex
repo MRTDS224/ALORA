@@ -1,0 +1,132 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% ALORA
+%
+% Document 0.2
+% Conception technique de la première phase
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[11pt,a4paper]{article}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Encodage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Mise en page
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{setspace}
+\setstretch{1.2}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Maths
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Graphiques
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{tikz}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Tableaux
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Couleurs
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Hyperliens
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage{hyperref}
+
+\hypersetup{
+colorlinks=true,
+linkcolor=blue,
+citecolor=blue,
+urlcolor=blue
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Bibliographie
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage[
+backend=biber,
+style=ieee
+]{biblatex}
+
+\addbibresource{references.bib}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Titres
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage{titlesec}
+
+\titleformat{\section}
+{\Large\bfseries}
+{\thesection}
+{1em}
+{}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Paragraphes
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.6em}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Encadrés
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newtcolorbox{important}{
+colback=blue!5,
+colframe=blue!70!black,
+title=Point important
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+\begin{center}
+{\LARGE\textbf{ALORA}}\\[0.25cm]
+{\large Automatic Learning for Oral Resource-poor African Languages}\\[0.5cm]
+{\Large Conception technique de la première phase}
+\end{center}
+
+\vspace{0.4cm}
+
+\input{sections/introduction}
+
+\input{sections/architecture_technique}
+
+\input{sections/architecture_donnees}
+
+\input{sections/methodologie}
+
+\input{sections/questions}
+
+\end{document}

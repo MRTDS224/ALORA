@@ -1,0 +1,184 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Travail proposé durant l'été}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Le projet ALORA étant conçu comme un projet de recherche à long terme,
+il apparaît nécessaire de commencer par la construction de fondations
+solides avant d'aborder le développement des modèles d'intelligence
+artificielle.
+
+L'objectif de cette première phase n'est donc pas de développer un
+modèle de reconnaissance vocale ou de traduction, mais de construire
+une infrastructure scientifique permettant de collecter, organiser et
+préparer les données nécessaires aux travaux futurs.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Objectifs de cette première phase}
+
+Les objectifs principaux sont les suivants :
+
+\begin{enumerate}
+
+\item Définir une méthodologie rigoureuse de collecte de données
+orales.
+
+\item Concevoir une plateforme simple permettant la participation de
+locuteurs natifs.
+
+\item Définir la structure du corpus ainsi que les métadonnées à
+conserver.
+
+\item Concevoir un pipeline de validation et de contrôle qualité des
+enregistrements.
+
+\item Produire un premier corpus exploitable pour les expérimentations
+menées durant le semestre S5.
+
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Plateforme de collecte}
+
+Une plateforme web légère sera développée afin de permettre à des
+locuteurs natifs d'enregistrer des mots ou des phrases en soussou.
+
+Le principe envisagé est le suivant :
+
+\begin{itemize}
+
+\item présentation d'un mot ou d'une phrase en français ;
+
+\item enregistrement de la traduction orale par le participant ;
+
+\item possibilité de réenregistrer avant validation ;
+
+\item enregistrement automatique des métadonnées.
+
+\end{itemize}
+
+Cette approche permettra de constituer progressivement un corpus
+contenant plusieurs réalisations d'une même phrase par différents
+locuteurs.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Métadonnées envisagées}
+
+Chaque enregistrement devra être accompagné d'informations permettant
+de faciliter les analyses futures.
+
+À titre indicatif, les métadonnées suivantes sont envisagées :
+
+\begin{itemize}
+
+\item identifiant du locuteur (anonyme) ;
+
+\item âge (optionnel) ;
+
+\item sexe (optionnel) ;
+
+\item région d'origine ;
+
+\item langue maternelle ;
+
+\item langues parlées ;
+
+\item date d'enregistrement ;
+
+\item qualité estimée de l'audio ;
+
+\item texte français correspondant ;
+
+\item durée de l'enregistrement.
+
+\end{itemize}
+
+Cette liste reste volontairement ouverte et pourra évoluer selon les
+recommandations du laboratoire.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Organisation des données}
+
+Une attention particulière sera portée à l'organisation du corpus afin
+de faciliter son exploitation.
+
+Les travaux prévus comprennent notamment :
+
+\begin{itemize}
+
+\item définition de l'arborescence des données ;
+
+\item choix des formats audio ;
+
+\item convention de nommage des fichiers ;
+
+\item organisation des métadonnées ;
+
+\item préparation d'un format facilement exploitable par les outils de
+Machine Learning.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Contrôle qualité}
+
+Avant toute utilisation scientifique, les données devront être
+contrôlées afin de garantir leur qualité.
+
+Plusieurs mécanismes sont envisagés :
+
+\begin{itemize}
+
+\item détection des enregistrements silencieux ;
+
+\item contrôle de la durée ;
+
+\item détection de fichiers corrompus ;
+
+\item suppression des doublons ;
+
+\item vérification de la cohérence entre les métadonnées et
+l'enregistrement.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Résultats attendus}
+
+À l'issue de cette première phase, les livrables attendus sont les
+suivants :
+
+\begin{enumerate}
+
+\item une plateforme fonctionnelle de collecte de données ;
+
+\item une première version du corpus oral ;
+
+\item une documentation décrivant la structure des données ;
+
+\item un pipeline de validation et de préparation du corpus ;
+
+\item un ensemble de recommandations méthodologiques pour les étapes
+suivantes du projet.
+
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{discussion}
+
+Cette première phase représente principalement un travail de
+construction méthodologique.
+
+Je souhaiterais profiter de cette période pour bénéficier de votre
+expérience afin de valider les choix scientifiques concernant la
+collecte des données, l'organisation du corpus, les métadonnées à
+conserver ainsi que les outils les plus adaptés avant le démarrage des
+travaux de modélisation.
+
+\end{discussion}
