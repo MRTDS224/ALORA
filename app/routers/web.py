@@ -125,6 +125,75 @@ def handle_toggle_prompt(prompt_id: str, db: Session = Depends(get_db)):
     return RedirectResponse(url="/prompts", status_code=303)
 
 
+# --- RECORDINGS & VALIDATION ---
+@web_router.get("/recordings", response_class=HTMLResponse)
+def page_recordings(
+    request: Request,
+    status: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    recordings = recording_service.get_recordings(db, status=status)
+    return templates.TemplateResponse("recordings_list.html", {
+        "request": request,
+        "recordings": recordings,
+        "current_status": status
+    })
+
+@web_router.get("/recordings/{recording_id}", response_class=HTMLResponse)
+def page_recording_detail(
+    request: Request,
+    recording_id: str,
+    db: Session = Depends(get_db)
+):
+    from app.services import quality as quality_service
+    rec_uuid = UUID(recording_id)
+    rec = recording_service.get_recording_by_id(db, rec_uuid)
+    if not rec:
+        return RedirectResponse(url="/recordings", status_code=303)
+
+    qualities = quality_service.get_quality_annotations_by_recording(db, rec_uuid)
+    last_quality = qualities[0] if qualities else None
+
+    return templates.TemplateResponse("recording_detail.html", {
+        "request": request,
+        "recording": rec,
+        "quality_history": qualities,
+        "last_quality": last_quality
+    })
+
+@web_router.post("/recordings/{recording_id}/evaluate")
+def handle_evaluate_recording(
+    recording_id: str,
+    action: str = Form(...), # "validate" or "reject"
+    audio_quality: str = Form("good"),
+    noise_level: str = Form("low"),
+    clipping: Optional[str] = Form(None),
+    speech_present: Optional[str] = Form(None),
+    multiple_speakers: Optional[str] = Form(None),
+    reviewer: Optional[str] = Form(None),
+    notes: Optional[str] = Form(None),
+    db: Session = Depends(get_db)
+):
+    from app.schemas.quality import QualityAnnotationCreate
+    from app.services import quality as quality_service
+
+    rec_uuid = UUID(recording_id)
+    target_status = "validated" if action == "validate" else "rejected"
+
+    qual_in = QualityAnnotationCreate(
+        recording_id=rec_uuid,
+        audio_quality=audio_quality,
+        noise_level=noise_level,
+        clipping=bool(clipping),
+        speech_present=bool(speech_present),
+        multiple_speakers=bool(multiple_speakers),
+        reviewer=reviewer,
+        notes=notes
+    )
+    quality_service.create_quality_annotation(db, qual_in, recording_status=target_status)
+    return RedirectResponse(url=f"/recordings/{recording_id}", status_code=303)
+
+
 # --- RECORD (COLLECTE) ---
 @web_router.get("/record", response_class=HTMLResponse)
 def page_record(

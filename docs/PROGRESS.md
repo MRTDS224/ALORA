@@ -14,7 +14,7 @@ Ce document permet de suivre l'état d'avancement des tâches réalisées et res
 - [x] **Phase 2 : FastAPI & Service de Stockage MinIO (Priorités 2 & 3)**
 - [x] **Phase 3 : Gestion des Locuteurs, Sessions et Prompts (Priorité 4)**
 - [x] **Phase 4 : Collecte Audio & Upload Browser (Priorité 5)**
-- [ ] **Phase 5 : Interface & API de Validation Audio (Priorité 6)**
+- [x] **Phase 5 : Interface & API de Validation Audio (Priorité 6)**
 - [ ] **Phase 6 : Interface & API de Transcription (Priorité 7)**
 - [ ] **Phase 7 : Tableaux de Bord (Dashboard) (Priorité 8)**
 - [ ] **Phase 8 : Finitions UI/CSS & Validation Complète (Priorité 9)**
@@ -55,6 +55,11 @@ Ce document permet de suivre l'état d'avancement des tâches réalisées et res
 - Implémentation du service d'enregistrement (`app/services/recording.py`) et des endpoints API (`POST /api/recordings` et `GET /api/recordings/{id}/stream`).
 - Interface de collecte web (`/record`) permettant de lier session, prompt et fichier audio vers MinIO S3 + métadonnées PostgreSQL.
 
+### 7. Validation & Évaluation de Qualité Audio (Phase 5)
+- Schémas Pydantic (`app/schemas/quality.py`) et service d'annotation de qualité (`app/services/quality.py`).
+- API de validation et de rejet (`POST /api/recordings/{id}/validate` et `/reject`).
+- Interfaces web de listing filtré (`/recordings`) et fiche d'évaluation détaillée (`/recordings/{id}`) avec streaming audio et historique des revues.
+
 ---
 
 ## ⏳ Ce qui reste à faire
@@ -89,9 +94,9 @@ Ce document permet de suivre l'état d'avancement des tâches réalisées et res
 - [x] Commiter la fonctionnalité de collecte.
 
 ### 6. Validation & Qualité Audio
-- [ ] Développer la page `/recordings` et `/recordings/{id}` (Lecteur audio, formulaire de notation de qualité).
-- [ ] Endpoints de validation/rejet (`POST /api/recordings/{id}/validate`, `POST /api/recordings/{id}/reject`).
-- [ ] Commiter la fonctionnalité de validation.
+- [x] Développer la page `/recordings` et `/recordings/{id}` (Lecteur audio, formulaire de notation de qualité).
+- [x] Implémenter le service d'annotation de qualité (`app/services/quality.py`) et les endpoints API `/validate` et `/reject`.
+- [x] Commiter l'interface de validation.
 
 ### 7. Transcription & Versionnement
 - [ ] Développer la page `/transcriptions/{recording_id}` (Interface de saisie et gestion du versionnement des transcriptions).

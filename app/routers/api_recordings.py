@@ -92,3 +92,67 @@ def stream_audio(
         return StreamingResponse(stream.stream(32768), media_type=media_type)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur de lecture audio MinIO: {e}")
+
+@router.post("/{recording_id}/validate", response_model=RecordingRead)
+def validate_recording(
+    recording_id: UUID,
+    audio_quality: str = Form("good"),
+    noise_level: str = Form("low"),
+    clipping: bool = Form(False),
+    speech_present: bool = Form(True),
+    multiple_speakers: bool = Form(False),
+    reviewer: Optional[str] = Form(None),
+    notes: Optional[str] = Form(None),
+    db: Session = Depends(get_db)
+):
+    from app.schemas.quality import QualityAnnotationCreate
+    from app.services import quality as quality_service
+
+    rec = recording_service.get_recording_by_id(db, recording_id)
+    if not rec:
+        raise HTTPException(status_code=404, detail="Enregistrement non trouvé")
+
+    qual_in = QualityAnnotationCreate(
+        recording_id=recording_id,
+        audio_quality=audio_quality,
+        noise_level=noise_level,
+        clipping=clipping,
+        speech_present=speech_present,
+        multiple_speakers=multiple_speakers,
+        reviewer=reviewer,
+        notes=notes
+    )
+    quality_service.create_quality_annotation(db, qual_in, recording_status="validated")
+    return recording_service.get_recording_by_id(db, recording_id)
+
+@router.post("/{recording_id}/reject", response_model=RecordingRead)
+def reject_recording(
+    recording_id: UUID,
+    audio_quality: str = Form("poor"),
+    noise_level: str = Form("high"),
+    clipping: bool = Form(False),
+    speech_present: bool = Form(False),
+    multiple_speakers: bool = Form(False),
+    reviewer: Optional[str] = Form(None),
+    notes: Optional[str] = Form(None),
+    db: Session = Depends(get_db)
+):
+    from app.schemas.quality import QualityAnnotationCreate
+    from app.services import quality as quality_service
+
+    rec = recording_service.get_recording_by_id(db, recording_id)
+    if not rec:
+        raise HTTPException(status_code=404, detail="Enregistrement non trouvé")
+
+    qual_in = QualityAnnotationCreate(
+        recording_id=recording_id,
+        audio_quality=audio_quality,
+        noise_level=noise_level,
+        clipping=clipping,
+        speech_present=speech_present,
+        multiple_speakers=multiple_speakers,
+        reviewer=reviewer,
+        notes=notes
+    )
+    quality_service.create_quality_annotation(db, qual_in, recording_status="rejected")
+    return recording_service.get_recording_by_id(db, recording_id)

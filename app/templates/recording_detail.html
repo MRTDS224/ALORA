@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Détails & Validation {{ recording.recording_code }} — ALORA{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2 class="page-title">Enregistrement {{ recording.recording_code }}</h2>
+    <p class="subtitle">Évaluation de la qualité audio & statut dans le pipeline</p>
+  </div>
+  <a href="/recordings" class="btn btn-secondary">← Retour à la liste</a>
+</div>
+
+<div class="form-grid">
+  <!-- Fiche Métadonnées & Player -->
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <h3>Informations Audio</h3>
+      <span class="badge badge-{{ recording.recording_status }}" style="font-size: 0.9rem;">
+        Statut : {{ recording.recording_status }}
+      </span>
+    </div>
+
+    <!-- Lecteur Audio Stream MinIO -->
+    <div style="background: var(--neutral-100); padding: 1.5rem; border-radius: 8px; text-align: center; margin-bottom: 1.5rem;">
+      <audio src="/api/recordings/{{ recording.id }}/stream" controls style="width: 100%; margin-bottom: 0.5rem;"></audio>
+      <div style="font-size: 0.85rem; color: var(--neutral-600);">
+        Clé MinIO S3 : <code>{{ recording.audio_object_key }}</code>
+      </div>
+    </div>
+
+    <table style="width: 100%; border: none;">
+      <tr>
+        <td><strong>Locuteur :</strong></td>
+        <td>{{ recording.session.speaker.speaker_code if recording.session and recording.session.speaker else '-' }}</td>
+      </tr>
+      <tr>
+        <td><strong>Session :</strong></td>
+        <td>{{ recording.session.session_code if recording.session else '-' }} ({{ recording.session.environment }})</td>
+      </tr>
+      <tr>
+        <td><strong>Prompt :</strong></td>
+        <td>
+          {% if recording.prompt %}
+            <strong>{{ recording.prompt.title }}</strong><br>
+            <em>« {{ recording.prompt.content }} »</em>
+          {% else %}
+            Parole libre
+          {% endif %}
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Durée :</strong></td>
+        <td>{{ recording.duration_seconds|round(2) if recording.duration_seconds else '-' }} secondes</td>
+      </tr>
+      <tr>
+        <td><strong>Format & Taille :</strong></td>
+        <td>{{ recording.format|upper }} • {{ (recording.file_size_bytes / 1024)|round(1) if recording.file_size_bytes else '-' }} KB</td>
+      </tr>
+      <tr>
+        <td><strong>Échantillonnage :</strong></td>
+        <td>{{ recording.sample_rate or '16000' }} Hz, {{ recording.channels or '1' }} canal(x)</td>
+      </tr>
+    </table>
+
+    <div style="margin-top: 1.5rem;">
+      <a href="/transcriptions/{{ recording.id }}" class="btn btn-primary" style="width: 100%; text-align: center;">
+        ✍️ Accéder à la Transcription de cet Audio
+      </a>
+    </div>
+  </div>
+
+  <!-- Formulaire d'Évaluation de Qualité -->
+  <div class="card">
+    <h3 style="margin-bottom: 1rem;">Formulaire de Validation Qualité</h3>
+
+    <form action="/recordings/{{ recording.id }}/evaluate" method="POST">
+      <div class="form-group">
+        <label for="audio_quality">Qualité acoustique globale</label>
+        <select id="audio_quality" name="audio_quality" class="form-control">
+          <option value="good" {% if last_quality and last_quality.audio_quality == 'good' %}selected{% endif %}>Basse distorsion (Good)</option>
+          <option value="fair" {% if last_quality and last_quality.audio_quality == 'fair' %}selected{% endif %}>Moyenne (Fair)</option>
+          <option value="poor" {% if last_quality and last_quality.audio_quality == 'poor' %}selected{% endif %}>Inaudible / Mauvaise (Poor)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="noise_level">Niveau de bruit ambiant</label>
+        <select id="noise_level" name="noise_level" class="form-control">
+          <option value="low" {% if last_quality and last_quality.noise_level == 'low' %}selected{% endif %}>Faible (Low)</option>
+          <option value="medium" {% if last_quality and last_quality.noise_level == 'medium' %}selected{% endif %}>Modéré (Medium)</option>
+          <option value="high" {% if last_quality and last_quality.noise_level == 'high' %}selected{% endif %}>Élevé (High)</option>
+        </select>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+        <div>
+          <label style="font-weight: 500;">
+            <input type="checkbox" name="speech_present" value="true" {% if not last_quality or last_quality.speech_present %}checked{% endif %}>
+            Parole intelligible présente
+          </label>
+        </div>
+        <div>
+          <label style="font-weight: 500;">
+            <input type="checkbox" name="clipping" value="true" {% if last_quality and last_quality.clipping %}checked{% endif %}>
+            Saturation / Saturation (Clipping)
+          </label>
+        </div>
+        <div>
+          <label style="font-weight: 500;">
+            <input type="checkbox" name="multiple_speakers" value="true" {% if last_quality and last_quality.multiple_speakers %}checked{% endif %}>
+            Locuteurs multiples en parallèle
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="reviewer">Évaluateur / Validateur</label>
+        <input type="text" id="reviewer" name="reviewer" class="form-control" placeholder="Nom du réviseur" value="{{ last_quality.reviewer if last_quality else '' }}">
+      </div>
+
+      <div class="form-group">
+        <label for="notes">Notes & Commentaires sur la qualité</label>
+        <textarea id="notes" name="notes" class="form-control" placeholder="Bruit de coq, vent dans le micro, hésitation du locuteur...">{{ last_quality.notes if last_quality else '' }}</textarea>
+      </div>
+
+      <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+        <button type="submit" name="action" value="validate" class="btn btn-success" style="flex: 1;">
+          ✅ Valider l'Enregistrement
+        </button>
+        <button type="submit" name="action" value="reject" class="btn btn-danger" style="flex: 1;">
+          ❌ Rejeter l'Enregistrement
+        </button>
+      </div>
+    </form>
+
+    <!-- Historique des évaluations -->
+    {% if quality_history %}
+    <div style="margin-top: 2rem; border-top: 1px solid var(--neutral-200); padding-top: 1rem;">
+      <h4 style="margin-bottom: 0.5rem; font-size: 0.95rem;">Historique des évalutions :</h4>
+      {% for q in quality_history %}
+      <div style="font-size: 0.85rem; background: var(--neutral-100); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem;">
+        <strong>Qualité: {{ q.audio_quality }}</strong> | Bruit: {{ q.noise_level }} | Par: {{ q.reviewer or 'Anonyme' }} ({{ q.created_at.strftime('%d/%m/%Y %H:%M') }})
+        {% if q.notes %}<br><em>Notes: {{ q.notes }}</em>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

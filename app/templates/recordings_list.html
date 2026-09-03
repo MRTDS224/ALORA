@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Validation & Enregistrements — ALORA{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2 class="page-title">Validation des Enregistrements Audio</h2>
+    <p class="subtitle">Évaluation de la qualité acoustique, écoute et contrôle avant transcription.</p>
+  </div>
+  <a href="/record" class="btn btn-primary">🎙️ Nouvel Enregistrement</a>
+</div>
+
+<div class="card">
+  <!-- Filtres par statut -->
+  <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+    <a href="/recordings" class="btn btn-sm {% if not current_status %}btn-primary{% else %}btn-secondary{% endif %}">Tous</a>
+    <a href="/recordings?status=uploaded" class="btn btn-sm {% if current_status == 'uploaded' %}btn-primary{% else %}btn-secondary{% endif %}">
+      À valider (Uploaded)
+    </a>
+    <a href="/recordings?status=validated" class="btn btn-sm {% if current_status == 'validated' %}btn-primary{% else %}btn-secondary{% endif %}">
+      Validés
+    </a>
+    <a href="/recordings?status=transcribed" class="btn btn-sm {% if current_status == 'transcribed' %}btn-primary{% else %}btn-secondary{% endif %}">
+      Transcrits
+    </a>
+    <a href="/recordings?status=rejected" class="btn btn-sm {% if current_status == 'rejected' %}btn-primary{% else %}btn-secondary{% endif %}">
+      Rejetés
+    </a>
+  </div>
+
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Locuteur & Session</th>
+          <th>Prompt / Contenu</th>
+          <th>Durée</th>
+          <th>Lecteur Audio</th>
+          <th>Statut</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rec in recordings %}
+        <tr>
+          <td><strong>{{ rec.recording_code }}</strong></td>
+          <td>
+            {% if rec.session and rec.session.speaker %}
+              <strong>{{ rec.session.speaker.speaker_code }}</strong><br>
+              <small style="color: var(--neutral-600);">Session: {{ rec.session.session_code }}</small>
+            {% else %}
+              Session {{ rec.session.session_code if rec.session else '-' }}
+            {% endif %}
+          </td>
+          <td>
+            {% if rec.prompt %}
+              <strong>{{ rec.prompt.title }}</strong><br>
+              <small style="color: var(--neutral-800); font-style: italic;">« {{ rec.prompt.content|truncate(40) }} »</small>
+            {% else %}
+              <span style="color: var(--neutral-600);">Parole libre</span>
+            {% endif %}
+          </td>
+          <td>{{ rec.duration_seconds|round(1) if rec.duration_seconds else '-' }}s</td>
+          <td>
+            <audio src="/api/recordings/{{ rec.id }}/stream" controls preload="metadata" style="height: 32px; max-width: 180px;"></audio>
+          </td>
+          <td>
+            <span class="badge badge-{{ rec.recording_status }}">
+              {{ rec.recording_status }}
+            </span>
+          </td>
+          <td>
+            <a href="/recordings/{{ rec.id }}" class="btn btn-secondary btn-sm">Détails & Validation</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" style="text-align: center; color: var(--neutral-600);">Aucun enregistrement correspondant.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
