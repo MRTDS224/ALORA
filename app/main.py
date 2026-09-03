@@ -3,18 +3,19 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
 
 from app.core.config import settings
 from app.services.storage import storage_service
+from app.routers.api_speakers import router as api_speakers_router
+from app.routers.api_sessions import router as api_sessions_router
+from app.routers.api_prompts import router as api_prompts_router
+from app.routers.web import web_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup actions
     print(f"[ALORA Application] Starting up ({settings.APP_NAME})...")
     storage_service.ensure_bucket_exists()
     yield
-    # Shutdown actions
     print("[ALORA Application] Shutting down...")
 
 app = FastAPI(
@@ -24,16 +25,14 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Configure Jinja2 templates
 templates = Jinja2Templates(directory="app/templates")
 
-@app.middleware("http")
-async def add_current_year(request: Request, call_next):
-    response = await call_next(request)
-    return response
+app.include_router(api_speakers_router)
+app.include_router(api_sessions_router)
+app.include_router(api_prompts_router)
+app.include_router(web_router)
 
 @app.get("/health")
 def health_check():

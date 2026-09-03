@@ -1,0 +1,25 @@
+import datetime
+from uuid import UUID
+from typing import Optional
+from pydantic import BaseModel, ConfigDict
+from app.schemas.speaker import SpeakerRead
+
+class SessionBase(BaseModel):
+    speaker_id: UUID
+    location: Optional[str] = None
+    environment: Optional[str] = "quiet_room"
+    device: Optional[str] = "browser_mic"
+    collector: Optional[str] = None
+    notes: Optional[str] = None
+
+class SessionCreate(SessionBase):
+    session_code: Optional[str] = None  # Generated automatically if omitted (e.g. SES_000001)
+
+class SessionRead(SessionBase):
+    id: UUID
+    session_code: str
+    recorded_at: datetime.datetime
+    created_at: datetime.datetime
+    speaker: Optional[SpeakerRead] = None
+
+    model_config = ConfigDict(from_attributes=True)

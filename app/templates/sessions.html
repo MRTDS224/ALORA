@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des Sessions — ALORA{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2 class="page-title">Sessions d'Enregistrement</h2>
+    <p class="subtitle">Séances de collecte associées aux locuteurs et conditions environnementales.</p>
+  </div>
+</div>
+
+<div class="form-grid">
+  <!-- Formulaire de création de session -->
+  <div class="card">
+    <h3 style="margin-bottom: 1rem;">Nouvelle Session</h3>
+    <form action="/sessions" method="POST">
+      <div class="form-group">
+        <label for="speaker_id">Locuteur *</label>
+        <select id="speaker_id" name="speaker_id" class="form-control" required>
+          <option value="">-- Sélectionner un locuteur --</option>
+          {% for s in speakers %}
+          <option value="{{ s.id }}" {% if selected_speaker_id == s.id|string %}selected{% endif %}>
+            {{ s.speaker_code }} ({{ s.age_group }}, {{ s.gender }}, {{ s.region }})
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="session_code">Code Session (Optionnel, auto-généré)</label>
+        <input type="text" id="session_code" name="session_code" class="form-control" placeholder="ex: SES_000001">
+      </div>
+      <div class="form-group">
+        <label for="location">Lieu de la collecte</label>
+        <input type="text" id="location" name="location" class="form-control" placeholder="ex: Kindia Centre, Maison des Jeunes">
+      </div>
+      <div class="form-group">
+        <label for="environment">Environnement acoustique</label>
+        <select id="environment" name="environment" class="form-control">
+          <option value="quiet_room">Pièce calme (Quiet Room)</option>
+          <option value="indoor">Intérieur normal (Indoor)</option>
+          <option value="outdoor">Extérieur (Outdoor)</option>
+          <option value="noisy">Bruyant (Noisy)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="device">Matériel d'enregistrement</label>
+        <input type="text" id="device" name="device" class="form-control" value="browser_mic" placeholder="ex: Navigateur Web / Smartphone">
+      </div>
+      <div class="form-group">
+        <label for="collector">Enquêteur / Agent de collecte</label>
+        <input type="text" id="collector" name="collector" class="form-control" placeholder="Nom de l'enquêteur">
+      </div>
+      <div class="form-group">
+        <label for="notes">Notes / Observations</label>
+        <textarea id="notes" name="notes" class="form-control" placeholder="Conditions météo, humeur du locuteur, bruits parasites..."></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width: 100%;">Créer la Session</button>
+    </form>
+  </div>
+
+  <!-- Liste des sessions -->
+  <div class="card" style="grid-column: span 2;">
+    <h3 style="margin-bottom: 1rem;">Sessions Enregistrées ({{ sessions|length }})</h3>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Code Session</th>
+            <th>Locuteur</th>
+            <th>Date</th>
+            <th>Environnement</th>
+            <th>Enregistrements</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for sess in sessions %}
+          <tr>
+            <td><strong>{{ sess.session_code }}</strong></td>
+            <td>
+              {% if sess.speaker %}
+                {{ sess.speaker.speaker_code }} ({{ sess.speaker.region }})
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>{{ sess.recorded_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td>{{ sess.environment or 'Non spécifié' }}</td>
+            <td><span class="badge badge-uploaded">{{ sess.recordings|length }} audio(s)</span></td>
+            <td>
+              <a href="/record?session_id={{ sess.id }}" class="btn btn-primary btn-sm">🎙️ Démarrer la collecte</a>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6" style="text-align: center; color: var(--neutral-600);">Aucune session enregistrée.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

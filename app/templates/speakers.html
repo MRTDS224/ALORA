@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des Locuteurs — ALORA{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2 class="page-title">Locuteurs (Speakers)</h2>
+    <p class="subtitle">Gestion pseudonymisée des participants au corpus scientifique Susu.</p>
+  </div>
+</div>
+
+<div class="form-grid">
+  <!-- Formulaire de création -->
+  <div class="card">
+    <h3 style="margin-bottom: 1rem;">Nouveau Locuteur</h3>
+    <form action="/speakers" method="POST">
+      <div class="form-group">
+        <label for="speaker_code">Code Locuteur (Optionnel, auto-généré si vide)</label>
+        <input type="text" id="speaker_code" name="speaker_code" class="form-control" placeholder="ex: SPK_000001">
+      </div>
+      <div class="form-group">
+        <label for="age_group">Tranche d'âge</label>
+        <select id="age_group" name="age_group" class="form-control">
+          <option value="18-25">18-25 ans</option>
+          <option value="26-35">26-35 ans</option>
+          <option value="36-50">36-50 ans</option>
+          <option value="50+">Plus de 50 ans</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="gender">Genre</label>
+        <select id="gender" name="gender" class="form-control">
+          <option value="female">Femme (Female)</option>
+          <option value="male">Homme (Male)</option>
+          <option value="other">Autre</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="region">Région</label>
+        <input type="text" id="region" name="region" class="form-control" placeholder="ex: Kindia, Conakry, Boké..." value="Kindia">
+      </div>
+      <div class="form-group">
+        <label for="location">Localité / Ville</label>
+        <input type="text" id="location" name="location" class="form-control" placeholder="ex: Kindia Centre">
+      </div>
+      <div class="form-group">
+        <label for="native_language">Langue Maternelle</label>
+        <input type="text" id="native_language" name="native_language" class="form-control" value="Susu">
+      </div>
+      <div class="form-group">
+        <label for="other_languages">Autres langues parlées</label>
+        <input type="text" id="other_languages" name="other_languages" class="form-control" placeholder="ex: Français, Poular">
+      </div>
+      <div class="form-group">
+        <label for="consent_status">Statut de Consentement</label>
+        <select id="consent_status" name="consent_status" class="form-control">
+          <option value="granted">Accordé (Granted)</option>
+          <option value="pending">En attente (Pending)</option>
+          <option value="revoked">Révoqué (Revoked)</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width: 100%;">Enregistrer le Locuteur</button>
+    </form>
+  </div>
+
+  <!-- Liste des locuteurs -->
+  <div class="card" style="grid-column: span 2;">
+    <h3 style="margin-bottom: 1rem;">Liste des Locuteurs ({{ speakers|length }})</h3>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Âge</th>
+            <th>Genre</th>
+            <th>Région</th>
+            <th>Langue nat.</th>
+            <th>Consentement</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in speakers %}
+          <tr>
+            <td><strong>{{ s.speaker_code }}</strong></td>
+            <td>{{ s.age_group }}</td>
+            <td>{{ s.gender }}</td>
+            <td>{{ s.region or '-' }}</td>
+            <td>{{ s.native_language }}</td>
+            <td>
+              <span class="badge {% if s.consent_status == 'granted' %}badge-validated{% else %}badge-validating{% endif %}">
+                {{ s.consent_status }}
+              </span>
+            </td>
+            <td>
+              <a href="/sessions?speaker_id={{ s.id }}" class="btn btn-secondary btn-sm">Sessions</a>
+              <a href="/record?speaker_id={{ s.id }}" class="btn btn-primary btn-sm">🎙️ Enregistrer</a>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="7" style="text-align: center; color: var(--neutral-600);">Aucun locuteur enregistré pour le moment.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

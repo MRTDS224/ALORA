@@ -12,7 +12,7 @@ Ce document permet de suivre l'état d'avancement des tâches réalisées et res
 - [x] **Phase 0 : Initialisation & Environnement (`uv` Python 3.12 + Git)**
 - [x] **Phase 1 : Infrastructure & Modèles PostgreSQL + Alembic (Priorités 1 & 2)**
 - [x] **Phase 2 : FastAPI & Service de Stockage MinIO (Priorités 2 & 3)**
-- [ ] **Phase 3 : Gestion des Locuteurs, Sessions et Prompts (Priorité 4)**
+- [x] **Phase 3 : Gestion des Locuteurs, Sessions et Prompts (Priorité 4)**
 - [ ] **Phase 4 : Collecte Audio & Upload Browser (Priorité 5)**
 - [ ] **Phase 5 : Interface & API de Validation Audio (Priorité 6)**
 - [ ] **Phase 6 : Interface & API de Transcription (Priorité 7)**
@@ -45,6 +45,11 @@ Ce document permet de suivre l'état d'avancement des tâches réalisées et res
 - Implémentation du service S3/MinIO (`app/services/storage.py`) gérant la création automatique du bucket `alora-storage` et l'organisation des objets sous `raw/YYYY/MM/DD/REC_code.wav`.
 - Structure de l'application FastAPI (`app/main.py`) avec gestion du cycle de vie (lifespan), endpoint de santé (`/health`), fichiers statiques CSS (`static/css/style.css`) et layout Jinja2 (`app/templates/base.html`).
 
+### 5. Entités Métier — Locuteurs, Sessions, Prompts (Phase 3)
+- Création des schémas Pydantic (`app/schemas/speaker.py`, `app/schemas/session.py`, `app/schemas/prompt.py`).
+- Implémentation des services CRUD avec génération automatique des codes pseudonymisés (`SPK_xxxxxx`, `SES_xxxxxx`, `PRM_xxxxxx`).
+- Création des routes API (`/api/speakers`, `/api/sessions`, `/api/prompts`) et interfaces Web Jinja2 (`/speakers`, `/sessions`, `/prompts`).
+
 ---
 
 ## ⏳ Ce qui reste à faire
@@ -69,9 +74,9 @@ Ce document permet de suivre l'état d'avancement des tâches réalisées et res
 - [x] Commiter la couche API & MinIO.
 
 ### 4. Entités Métier (Locuteurs, Sessions, Prompts)
-- [ ] Créer les schémas Pydantic et endpoints API CRUD pour Speakers, Sessions, Prompts.
-- [ ] Implémenter les templates HTML Jinja2 (`/speakers`, `/sessions`, `/prompts`).
-- [ ] Commiter par module (Speakers, Sessions, Prompts).
+- [x] Créer les schémas Pydantic et endpoints API CRUD pour Speakers, Sessions, Prompts.
+- [x] Implémenter les templates HTML Jinja2 (`/speakers`, `/sessions`, `/prompts`).
+- [x] Commiter par module (Speakers, Sessions, Prompts).
 
 ### 5. Collecte & Upload Audio
 - [ ] Créer la page web de collecte `/record` (Enregistreur navigateur Web Audio API, chronomètre, prévisualisation).
