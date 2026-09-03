@@ -1,3 +1,4 @@
+import subprocess
 from typing import List, Optional
 from uuid import UUID
 from sqlalchemy.orm import Session
@@ -8,6 +9,27 @@ from app.services.storage import storage_service
 def generate_recording_code(db: Session) -> str:
     count = db.query(func.count(Recording.id)).scalar() or 0
     return f"REC_{count + 1:06d}"
+
+def normalize_audio_ffmpeg(audio_bytes: bytes) -> bytes:
+    """
+    Normalizes input audio bytes to 16kHz, mono 16-bit PCM WAV using FFmpeg.
+    Returns converted bytes or original bytes if conversion fails.
+    """
+    if not audio_bytes:
+        return audio_bytes
+    try:
+        process = subprocess.Popen(
+            ["ffmpeg", "-hide_banner", "-loglevel", "error", "-i", "pipe:0", "-ar", "16000", "-ac", "1", "-f", "wav", "pipe:1"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        out, err = process.communicate(input=audio_bytes)
+        if process.returncode == 0 and out and len(out) > 44:  # 44 bytes minimum for WAV header
+            return out
+    except Exception as e:
+        print(f"[FFmpeg] Normalization warning: {e}")
+    return audio_bytes
 
 def create_recording(
     db: Session,
@@ -21,27 +43,32 @@ def create_recording(
     file_format: str = "wav",
     content_type: str = "audio/wav"
 ) -> Recording:
-    code = recording_code or generate_recording_code(db)
-    object_key = storage_service.generate_object_key(recording_code=code, file_extension=file_format)
+    # 1. Normalize audio with FFmpeg to 16kHz Mono WAV
+    processed_bytes = normalize_audio_ffmpeg(audio_bytes)
+    final_format = "wav" if processed_bytes != audio_bytes else file_format
+    final_content_type = "audio/wav" if processed_bytes != audio_bytes else content_type
 
-    # 1. Upload audio to MinIO
+    code = recording_code or generate_recording_code(db)
+    object_key = storage_service.generate_object_key(recording_code=code, file_extension=final_format)
+
+    # 2. Upload audio to MinIO
     storage_service.upload_file(
-        file_bytes=audio_bytes,
+        file_bytes=processed_bytes,
         object_key=object_key,
-        content_type=content_type
+        content_type=final_content_type
     )
 
-    # 2. Create PostgreSQL Recording record
+    # 3. Create PostgreSQL Recording record
     db_recording = Recording(
         recording_code=code,
         session_id=session_id,
         prompt_id=prompt_id,
         audio_object_key=object_key,
         duration_seconds=duration_seconds,
-        sample_rate=sample_rate,
-        channels=channels,
-        format=file_format,
-        file_size_bytes=len(audio_bytes),
+        sample_rate=16000 if processed_bytes != audio_bytes else sample_rate,
+        channels=1 if processed_bytes != audio_bytes else channels,
+        format=final_format,
+        file_size_bytes=len(processed_bytes),
         recording_status="uploaded"
     )
 
