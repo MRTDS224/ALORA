@@ -17,7 +17,7 @@ Ce document permet de suivre l'état d'avancement des tâches réalisées et res
 - [x] **Phase 5 : Interface & API de Validation Audio (Priorité 6)**
 - [x] **Phase 6 : Interface & API de Transcription (Priorité 7)**
 - [x] **Phase 7 : Tableaux de Bord (Dashboard) (Priorité 8)**
-- [ ] **Phase 8 : Finitions UI/CSS & Validation Complète (Priorité 9)**
+- [x] **Phase 8 : Finitions UI/CSS & Validation Complète (Priorité 9)**
 
 ---
 
@@ -33,7 +33,7 @@ Ce document permet de suivre l'état d'avancement des tâches réalisées et res
 - Initialisation du dépôt Git (`main`).
 - Initialisation du projet Python 3.12 avec `uv` (`pyproject.toml`, `uv.lock`).
 - Configuration de `.gitignore` et `.env.example`.
-- Installation des dépendances majeures : `fastapi`, `uvicorn`, `sqlalchemy`, `alembic`, `psycopg2-binary`, `minio`, `jinja2`, `python-multipart`, `pydantic-settings`.
+- Installation des dépendances majeures : `fastapi`, `uvicorn`, `sqlalchemy`, `alembic`, `psycopg2-binary`, `minio`, `jinja2`, `python-multipart`, `pydantic-settings`, `pytest`, `httpx`.
 
 ### 3. Infrastructure Docker & Schéma de Base de Données (Phase 1)
 - Création du fichier `docker-compose.yml` avec services PostgreSQL 16 (port 5434) et MinIO (ports 9000 & 9001).
@@ -68,6 +68,10 @@ Ce document permet de suivre l'état d'avancement des tâches réalisées et res
 ### 9. Tableau de Bord (Dashboard) (Phase 7)
 - Service de calcul des statistiques globales du corpus (`app/services/stats.py`).
 - Interface de garde (`/`) avec indicateurs clés (locuteurs, durée cumulée, volumes audio, état du pipeline et activité récente).
+
+### 10. Tests d'Intégration & Recette ("Definition of Done") (Phase 8)
+- Rédaction du banc de tests automatisés de bout en bout (`tests/test_end_to_end.py`).
+- Validation complète de la "Definition of Done" (PostgreSQL, MinIO S3, API REST, Web App FastAPI Jinja2).
 
 ---
 
@@ -114,5 +118,5 @@ Ce document permet de suivre l'état d'avancement des tâches réalisées et res
 
 ### 8. Dashboard & Expérience Utilisateur
 - [x] Développer le tableau de bord `/` avec métriques du corpus (nombre de locuteurs, heures d'enregistrement, statut des traitements).
-- [ ] Peaufiner le CSS Vanilla pour un usage fluide sur le terrain (tablettes/laptops).
-- [ ] Effectuer le test d'intégration de bout en bout ("Definition of Done").
+- [x] Peaufiner le CSS Vanilla pour un usage fluide sur le terrain (tablettes/laptops).
+- [x] Effectuer le test d'intégration de bout en bout ("Definition of Done").

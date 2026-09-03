@@ -9,6 +9,7 @@ from app.core.database import get_db
 from app.services import speaker as speaker_service
 from app.services import session as session_service
 from app.services import prompt as prompt_service
+from app.services import recording as recording_service
 from app.schemas.speaker import SpeakerCreate
 from app.schemas.session import SessionCreate
 from app.schemas.prompt import PromptCreate
@@ -22,20 +23,14 @@ web_router = APIRouter(tags=["Web Pages"])
 def page_dashboard(request: Request, db: Session = Depends(get_db)):
     from app.services import stats as stats_service
     stats = stats_service.get_dashboard_stats(db)
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request,
-        "stats": stats
-    })
+    return templates.TemplateResponse(request=request, name="dashboard.html", context={"stats": stats})
 
 
 # --- SPEAKERS ---
 @web_router.get("/speakers", response_class=HTMLResponse)
 def page_speakers(request: Request, db: Session = Depends(get_db)):
     speakers = speaker_service.get_speakers(db)
-    return templates.TemplateResponse("speakers.html", {
-        "request": request,
-        "speakers": speakers
-    })
+    return templates.TemplateResponse(request=request, name="speakers.html", context={"speakers": speakers})
 
 @web_router.post("/speakers")
 def handle_create_speaker(
@@ -68,8 +63,7 @@ def handle_create_speaker(
 def page_sessions(request: Request, speaker_id: Optional[str] = None, db: Session = Depends(get_db)):
     speakers = speaker_service.get_speakers(db)
     sessions = session_service.get_sessions(db)
-    return templates.TemplateResponse("sessions.html", {
-        "request": request,
+    return templates.TemplateResponse(request=request, name="sessions.html", context={
         "speakers": speakers,
         "sessions": sessions,
         "selected_speaker_id": speaker_id
@@ -103,10 +97,7 @@ def handle_create_session(
 @web_router.get("/prompts", response_class=HTMLResponse)
 def page_prompts(request: Request, db: Session = Depends(get_db)):
     prompts = prompt_service.get_prompts(db)
-    return templates.TemplateResponse("prompts.html", {
-        "request": request,
-        "prompts": prompts
-    })
+    return templates.TemplateResponse(request=request, name="prompts.html", context={"prompts": prompts})
 
 @web_router.post("/prompts")
 def handle_create_prompt(
@@ -144,8 +135,7 @@ def page_recordings(
     db: Session = Depends(get_db)
 ):
     recordings = recording_service.get_recordings(db, status=status)
-    return templates.TemplateResponse("recordings_list.html", {
-        "request": request,
+    return templates.TemplateResponse(request=request, name="recordings_list.html", context={
         "recordings": recordings,
         "current_status": status
     })
@@ -165,8 +155,7 @@ def page_recording_detail(
     qualities = quality_service.get_quality_annotations_by_recording(db, rec_uuid)
     last_quality = qualities[0] if qualities else None
 
-    return templates.TemplateResponse("recording_detail.html", {
-        "request": request,
+    return templates.TemplateResponse(request=request, name="recording_detail.html", context={
         "recording": rec,
         "quality_history": qualities,
         "last_quality": last_quality
@@ -201,12 +190,15 @@ def handle_evaluate_recording(
         reviewer=reviewer,
         notes=notes
     )
+    quality_service.create_quality_annotation(db, qual_in, recording_status=target_status)
+    return RedirectResponse(url=f"/recordings/{recording_id}", status_code=303)
+
+
 # --- TRANSCRIPTIONS ---
 @web_router.get("/transcriptions", response_class=HTMLResponse)
 def page_transcriptions(request: Request, db: Session = Depends(get_db)):
     recordings = recording_service.get_recordings(db)
-    return templates.TemplateResponse("transcriptions_list.html", {
-        "request": request,
+    return templates.TemplateResponse(request=request, name="transcriptions_list.html", context={
         "recordings": recordings
     })
 
@@ -225,8 +217,7 @@ def page_transcription_editor(
     transcriptions = transcription_service.get_transcriptions_by_recording(db, rec_uuid)
     latest_transcription = transcriptions[0] if transcriptions else None
 
-    return templates.TemplateResponse("transcription_editor.html", {
-        "request": request,
+    return templates.TemplateResponse(request=request, name="transcription_editor.html", context={
         "recording": rec,
         "transcriptions": transcriptions,
         "latest_transcription": latest_transcription
@@ -267,8 +258,7 @@ def page_record(
 ):
     sessions = session_service.get_sessions(db)
     prompts = prompt_service.get_prompts(db, active_only=True)
-    return templates.TemplateResponse("record.html", {
-        "request": request,
+    return templates.TemplateResponse(request=request, name="record.html", context={
         "sessions": sessions,
         "prompts": prompts,
         "selected_session_id": session_id,
