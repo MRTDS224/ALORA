@@ -62,7 +62,7 @@ def generate_praat_textgrid(db: Session, recording_id: UUID) -> str:
         Transcription.recording_id == recording_id
     ).order_by(Transcription.version.desc()).first()
 
-    trans_text = transcription.transcription_text if transcription else ""
+    trans_text = transcription.text if transcription else ""
     words = get_word_annotations_by_recording(db, recording_id)
 
     # Build Praat TextGrid format

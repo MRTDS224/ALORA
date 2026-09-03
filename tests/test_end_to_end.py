@@ -115,7 +115,19 @@ def test_full_corpus_lifecycle():
     t2_data = res.json()
     assert t2_data["version"] == 2
 
-    # 10. Check Web Interface Routes (HTML 200 OK)
+    # 10. Test Praat TextGrid Generation
+    res = client.get(f"/api/recordings/{recording_id}/textgrid")
+    assert res.status_code == 200
+    assert "ooTextFile" in res.text
+    assert "TextGrid" in res.text
+
+    # 11. Test Corpus ZIP Export
+    res = client.get("/api/export/corpus")
+    assert res.status_code == 200
+    assert res.headers["content-type"] == "application/zip"
+    assert len(res.content) > 100
+
+    # 12. Check Web Interface Routes (HTML 200 OK)
     assert client.get("/").status_code == 200
     assert client.get("/speakers").status_code == 200
     assert client.get("/sessions").status_code == 200

@@ -12,6 +12,7 @@ from app.routers.api_prompts import router as api_prompts_router
 from app.routers.api_recordings import router as api_recordings_router
 from app.routers.api_transcriptions import router as api_transcriptions_router
 from app.routers.api_segmentation import router as api_segmentation_router
+from app.routers.api_export import router as api_export_router
 from app.routers.web import web_router
 
 @asynccontextmanager
@@ -38,6 +39,7 @@ app.include_router(api_prompts_router)
 app.include_router(api_recordings_router)
 app.include_router(api_transcriptions_router)
 app.include_router(api_segmentation_router)
+app.include_router(api_export_router)
 app.include_router(web_router)
 
 @app.get("/health")
