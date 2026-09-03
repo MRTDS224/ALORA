@@ -10,7 +10,7 @@ Ce document permet de suivre l'état d'avancement des tâches réalisées et res
 
 - [x] **Lecture et analyse du brief** (`docs/ALORA_AGENT_BRIEF.md`)
 - [x] **Phase 0 : Initialisation & Environnement (`uv` Python 3.12 + Git)**
-- [ ] **Phase 1 : Infrastructure & Modèles PostgreSQL + Alembic (Priorités 1 & 2)**
+- [x] **Phase 1 : Infrastructure & Modèles PostgreSQL + Alembic (Priorités 1 & 2)**
 - [ ] **Phase 2 : FastAPI & Service de Stockage MinIO (Priorités 2 & 3)**
 - [ ] **Phase 3 : Gestion des Locuteurs, Sessions et Prompts (Priorité 4)**
 - [ ] **Phase 4 : Collecte Audio & Upload Browser (Priorité 5)**
@@ -35,6 +35,12 @@ Ce document permet de suivre l'état d'avancement des tâches réalisées et res
 - Configuration de `.gitignore` et `.env.example`.
 - Installation des dépendances majeures : `fastapi`, `uvicorn`, `sqlalchemy`, `alembic`, `psycopg2-binary`, `minio`, `jinja2`, `python-multipart`, `pydantic-settings`.
 
+### 3. Infrastructure Docker & Schéma de Base de Données (Phase 1)
+- Création du fichier `docker-compose.yml` avec services PostgreSQL 16 (port 5434) et MinIO (ports 9000 & 9001).
+- Configuration centralisée des paramètres de l'application dans `app/core/config.py` et moteur SQLAlchemy dans `app/core/database.py`.
+- Création des 8 modèles SQLAlchemy (`speakers`, `sessions`, `prompts`, `recordings`, `transcriptions`, `quality_annotations`, `segments`, `word_annotations`).
+- Initialisation d'Alembic et exécution de la première migration SQL (`defe874d90ca_initial_schema.py`).
+
 ---
 
 ## ⏳ Ce qui reste à faire
@@ -46,11 +52,11 @@ Ce document permet de suivre l'état d'avancement des tâches réalisées et res
 - [x] Premier commit Git.
 
 ### 2. Infrastructure & Base de données
-- [ ] Créer `docker-compose.yml` (PostgreSQL 16 + MinIO).
-- [ ] Configurer la connexion SQLAlchemy dans `app/core/database.py` et les variables d'environnement dans `app/core/config.py`.
-- [ ] Définir les 8 modèles SQLAlchemy (`speakers`, `sessions`, `prompts`, `recordings`, `transcriptions`, `quality_annotations`, `segments`, `word_annotations`).
-- [ ] Initialiser Alembic et générer la première migration SQL.
-- [ ] Commiter l'infrastructure DB.
+- [x] Créer `docker-compose.yml` (PostgreSQL 16 + MinIO).
+- [x] Configurer la connexion SQLAlchemy dans `app/core/database.py` et les variables d'environnement dans `app/core/config.py`.
+- [x] Définir les 8 modèles SQLAlchemy (`speakers`, `sessions`, `prompts`, `recordings`, `transcriptions`, `quality_annotations`, `segments`, `word_annotations`).
+- [x] Initialiser Alembic et générer la première migration SQL.
+- [x] Commiter l'infrastructure DB.
 
 ### 3. API FastAPI & MinIO
 - [ ] Structurer l'application FastAPI (`app/main.py`).
