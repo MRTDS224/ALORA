@@ -51,8 +51,16 @@
       </div>
 
       <div class="form-group">
-        <label for="device">Matériel d'enregistrement</label>
-        <input type="text" id="device" name="device" class="form-control" value="smartphone_browser" placeholder="ex: Smartphone Android / Micro USB">
+        <label for="device">Matériel d'enregistrement *</label>
+        <select id="device" name="device" class="form-control">
+          <option value="smartphone_mic" selected>Smartphone (micro intégré)</option>
+          <option value="smartphone_headset">Smartphone + écouteurs / micro-cravate</option>
+          <option value="laptop_mic">Ordinateur portable (micro intégré)</option>
+          <option value="usb_mic">Microphone externe USB</option>
+          <option value="studio_mic">Microphone studio (XLR / interface audio)</option>
+          <option value="voice_recorder">Enregistreur vocal dédié (Zoom / dictaphone)</option>
+          <option value="other">Autre matériel</option>
+        </select>
       </div>
 
       <div class="form-group">

@@ -100,7 +100,7 @@ def handle_create_session(
     location: Optional[str] = Form(None),
     environment: str = Form("quiet_room"),
     target_task: str = Form("asr"),
-    device: str = Form("browser_mic"),
+    device: str = Form("smartphone_mic"),
     collector: Optional[str] = Form(None),
     notes: Optional[str] = Form(None),
     db: Session = Depends(get_db)

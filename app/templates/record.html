@@ -94,12 +94,32 @@
       <h3 id="promptTitle" style="margin-bottom: 0.35rem;"></h3>
       <p id="promptContent" class="studio-prompt-text"></p>
       <p id="promptDesc" class="subtitle" style="display: none;"></p>
+      <ul id="imageCues" class="image-cues" style="display: none;">
+        <li>Que voyez-vous sur l'image ?</li>
+        <li>Que font les personnes ?</li>
+        <li>Où se passe la scène ?</li>
+      </ul>
     </section>
 
     <!-- Studio d'enregistrement tactile -->
     <section id="recorderBox" class="recorder-box" aria-label="Enregistreur audio">
       <div class="recording-timer" id="timerDisplay" aria-live="off">00:00</div>
-      <p class="duration-goal" id="durationGoal">Durée recommandée : au moins 15s</p>
+      <p class="duration-goal" id="durationGoal">Zone idéale : 15s – 30s (minimum absolu : 2s)</p>
+
+      <!-- Jauge visuelle de durée (0s -> 15s cible -> 30s idéal) -->
+      <div class="duration-gauge-wrap" id="durationGaugeWrap">
+        <div class="duration-gauge" role="progressbar" aria-label="Progression de la durée" aria-valuemin="0" aria-valuemax="30" aria-valuenow="0" id="durationGauge">
+          <div class="duration-gauge-ideal" id="durationIdealZone" aria-hidden="true"></div>
+          <div class="duration-gauge-fill" id="durationGaugeFill"></div>
+          <span class="duration-gauge-marker" id="durationTargetMarker" aria-hidden="true"></span>
+        </div>
+        <div class="duration-gauge-labels" aria-hidden="true">
+          <span>0s</span>
+          <span id="gaugeMinLabel">2s min</span>
+          <span id="gaugeTargetLabel">15s cible</span>
+          <span>30s</span>
+        </div>
+      </div>
 
       <div class="vu-meter" aria-hidden="true">
         <div id="vuMeterFill" class="vu-meter-fill"></div>

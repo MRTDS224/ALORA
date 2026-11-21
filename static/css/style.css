@@ -646,17 +646,108 @@ textarea.form-control {
   font-size: 0.86rem;
   font-weight: 600;
   color: var(--neutral-600);
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 }
 
 .duration-goal.goal-met {
   color: var(--success);
 }
 
+.duration-goal.goal-long {
+  color: var(--warning);
+}
+
+.duration-goal.goal-too-short {
+  color: var(--danger);
+}
+
+.duration-gauge-wrap {
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto 1rem;
+}
+
+.duration-gauge {
+  position: relative;
+  height: 14px;
+  background: var(--neutral-100);
+  border: 1px solid var(--neutral-200);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.duration-gauge-ideal {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  right: 0;
+  background: rgba(21, 128, 61, 0.14);
+}
+
+.duration-gauge-fill {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  width: 0%;
+  background: var(--ochre);
+  border-radius: 9999px;
+  transition: width 160ms linear, background-color 200ms ease;
+}
+
+.duration-gauge-fill.is-blocked {
+  background: var(--danger);
+}
+
+.duration-gauge-fill.is-ideal {
+  background: var(--success);
+}
+
+.duration-gauge-fill.is-long {
+  background: var(--primary);
+}
+
+.duration-gauge-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  background: var(--success);
+  z-index: 2;
+}
+
+.duration-gauge-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--neutral-600);
+  margin-top: 0.3rem;
+}
+
+.image-cues {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  list-style: none;
+  margin-top: 0.75rem;
+}
+
+.image-cues li {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--neutral-800);
+  background: var(--neutral-50);
+  border: 1px solid var(--neutral-200);
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+}
+
 .vu-meter {
   width: 100%;
-  max-width: 360px;
-  height: 12px;
+  max-width: 380px;
+  height: 10px;
   margin: 0 auto 1.25rem;
   background: var(--neutral-100);
   border-radius: 9999px;

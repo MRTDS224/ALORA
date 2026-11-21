@@ -28,7 +28,15 @@
   const recorderBox = document.getElementById("recorderBox");
   const timerDisplay = document.getElementById("timerDisplay");
   const durationGoal = document.getElementById("durationGoal");
+  const durationGauge = document.getElementById("durationGauge");
+  const durationGaugeFill = document.getElementById("durationGaugeFill");
+  const durationIdealZone = document.getElementById("durationIdealZone");
+  const durationTargetMarker = document.getElementById("durationTargetMarker");
+  const gaugeTargetLabel = document.getElementById("gaugeTargetLabel");
   const vuMeterFill = document.getElementById("vuMeterFill");
+  const HARD_MIN_SECONDS = 2.0;
+  const IDEAL_MAX_SECONDS = 30.0;
+  const SOFT_LONG_SECONDS = 40.0;
   const audioPreviewWrap = document.getElementById("audioPreviewWrap");
   const audioPreview = document.getElementById("audioPreview");
   const statusMsg = document.getElementById("statusMsg");
@@ -84,14 +92,49 @@
   }
 
   function updateDurationGoalUI(elapsedSec) {
-    if (!durationGoal) return;
     const target = getMinDurationTarget();
-    if (elapsedSec >= target) {
-      durationGoal.textContent = `Objectif atteint (${formatDuration(elapsedSec)} / ${target}s min recommandés)`;
+    const gaugeMax = Math.max(IDEAL_MAX_SECONDS, target * 2);
+    const targetPct = Math.min(85, Math.round((target / gaugeMax) * 100));
+    const fillPct = Math.min(100, (elapsedSec / gaugeMax) * 100);
+
+    if (durationIdealZone) durationIdealZone.style.left = `${targetPct}%`;
+    if (durationTargetMarker) durationTargetMarker.style.left = `${targetPct}%`;
+    if (gaugeTargetLabel) gaugeTargetLabel.textContent = `${target}s cible`;
+
+    if (durationGauge) {
+      durationGauge.setAttribute("aria-valuemax", String(gaugeMax));
+      durationGauge.setAttribute("aria-valuenow", String(Math.round(elapsedSec)));
+    }
+
+    if (durationGaugeFill) {
+      durationGaugeFill.style.width = `${fillPct}%`;
+      durationGaugeFill.classList.remove("is-blocked", "is-ideal", "is-long");
+      if (elapsedSec > 0 && elapsedSec < HARD_MIN_SECONDS) {
+        durationGaugeFill.classList.add("is-blocked");
+      } else if (elapsedSec >= target && elapsedSec <= SOFT_LONG_SECONDS) {
+        durationGaugeFill.classList.add("is-ideal");
+      } else if (elapsedSec > SOFT_LONG_SECONDS) {
+        durationGaugeFill.classList.add("is-long");
+      }
+    }
+
+    if (!durationGoal) return;
+    durationGoal.classList.remove("goal-met", "goal-long", "goal-too-short");
+
+    if (elapsedSec <= 0) {
+      durationGoal.textContent = `Zone idéale : ${target}s – ${gaugeMax}s (minimum absolu : ${HARD_MIN_SECONDS}s)`;
+    } else if (elapsedSec < HARD_MIN_SECONDS) {
+      durationGoal.textContent = `Trop court (${elapsedSec.toFixed(1)}s) — parlez au moins ${HARD_MIN_SECONDS}s`;
+      durationGoal.classList.add("goal-too-short");
+    } else if (elapsedSec < target) {
+      const remaining = Math.ceil(target - elapsedSec);
+      durationGoal.textContent = `Continuez encore ~${remaining}s pour atteindre la zone idéale (${target}s – ${gaugeMax}s)`;
+    } else if (elapsedSec <= SOFT_LONG_SECONDS) {
+      durationGoal.textContent = `Zone idéale atteinte (${formatDuration(elapsedSec)} · cible ${target}s – ${gaugeMax}s)`;
       durationGoal.classList.add("goal-met");
     } else {
-      durationGoal.textContent = `Durée recommandée : au moins ${target}s`;
-      durationGoal.classList.remove("goal-met");
+      durationGoal.textContent = `C'est déjà très riche (${formatDuration(elapsedSec)}) — vous pouvez arrêter quand vous avez fini.`;
+      durationGoal.classList.add("goal-long");
     }
   }
 
@@ -139,6 +182,10 @@
       if (descEl) {
         descEl.textContent = pDesc ? `Note / Traduction : ${pDesc}` : "";
         descEl.style.display = pDesc ? "block" : "none";
+      }
+      const cuesEl = document.getElementById("imageCues");
+      if (cuesEl) {
+        cuesEl.style.display = pType === "image" ? "flex" : "none";
       }
       if (imgWrap && imgEl) {
         if (mediaUrl) {
@@ -327,21 +374,36 @@
 
         if (audioPreview) audioPreview.src = audioUrl;
         if (audioPreviewWrap) audioPreviewWrap.style.display = "block";
-        if (btnUpload) btnUpload.disabled = false;
         if (btnRetake) btnRetake.style.display = "inline-flex";
 
         const minTarget = getMinDurationTarget();
-        if (recordingDuration < minTarget) {
+        if (recordingDuration < HARD_MIN_SECONDS) {
+          // Plancher dur anti-erreur (< 2s) : empêche les appuis accidentels
+          if (btnUpload) btnUpload.disabled = true;
+          if (statusMsg) {
+            statusMsg.innerHTML = `
+              <div class="alert alert-danger">
+                <strong>Enregistrement trop court (${recordingDuration.toFixed(1)}s — minimum absolu : ${HARD_MIN_SECONDS}s).</strong>
+                L'envoi est bloqué pour éviter les fausses manipulations. Cliquez sur <em>Recommencer</em> et parlez quelques secondes.
+              </div>
+            `;
+          }
+        } else if (recordingDuration < minTarget) {
+          // Zone intermédiaire (2s -> 14.9s) : avertissement non bloquant
+          if (btnUpload) btnUpload.disabled = false;
           if (statusMsg) {
             statusMsg.innerHTML = `
               <div class="alert alert-warning">
                 <strong>Durée courte (${recordingDuration.toFixed(1)}s / ${minTarget}s recommandés).</strong>
-                Vous pouvez cliquer sur <em>Recommencer</em> pour enrichir la description, ou envoyer la prise telle quelle.
+                Vous pouvez cliquer sur <em>Recommencer</em> pour détailler davantage, ou envoyer la prise telle quelle.
               </div>
             `;
           }
-        } else if (statusMsg) {
-          statusMsg.innerHTML = `<div class="alert alert-success">Enregistrement prêt (${recordingDuration.toFixed(1)}s). Écoutez l'aperçu puis envoyez.</div>`;
+        } else {
+          if (btnUpload) btnUpload.disabled = false;
+          if (statusMsg) {
+            statusMsg.innerHTML = `<div class="alert alert-success">Zone idéale atteinte (${recordingDuration.toFixed(1)}s). Écoutez l'aperçu puis envoyez.</div>`;
+          }
         }
       };
 
@@ -488,6 +550,12 @@
 
   async function uploadRecording() {
     if (!audioBlob) return;
+    if (recordingDuration < HARD_MIN_SECONDS) {
+      if (statusMsg) {
+        statusMsg.innerHTML = `<div class="alert alert-danger">Enregistrement trop court (&lt; ${HARD_MIN_SECONDS}s). Cliquez sur Recommencer.</div>`;
+      }
+      return;
+    }
     const sessionId = sessionSelect ? sessionSelect.value : "";
     const promptId = promptSelect ? promptSelect.value : "";
     if (!sessionId) return;
