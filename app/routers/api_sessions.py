@@ -4,9 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.schemas.session import SessionCreate, SessionRead
+from app.services import auth as auth_service
 from app.services import session as session_service
 
-router = APIRouter(prefix="/api/sessions", tags=["Sessions"])
+router = APIRouter(
+    prefix="/api/sessions",
+    tags=["Sessions"],
+    dependencies=[Depends(auth_service.require_api_roles("collector", "reviewer", "admin"))],
+)
 
 @router.get("", response_model=List[SessionRead])
 def list_sessions(

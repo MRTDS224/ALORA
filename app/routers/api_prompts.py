@@ -6,10 +6,12 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.schemas.prompt import PromptCreate, PromptRead
+from app.services import auth as auth_service
 from app.services import prompt as prompt_service
 from app.services.storage import storage_service
 
 router = APIRouter(prefix="/api/prompts", tags=["Prompts"])
+_collector_dep = Depends(auth_service.require_api_roles("collector", "reviewer", "admin"))
 
 
 class PromptRotationResponse(BaseModel):
@@ -19,7 +21,7 @@ class PromptRotationResponse(BaseModel):
     target_task: str
 
 
-@router.get("", response_model=List[PromptRead])
+@router.get("", response_model=List[PromptRead], dependencies=[_collector_dep])
 def list_prompts(
     skip: int = 0,
     limit: int = 100,
@@ -32,7 +34,7 @@ def list_prompts(
     )
 
 
-@router.post("", response_model=PromptRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=PromptRead, status_code=status.HTTP_201_CREATED, dependencies=[_collector_dep])
 def create_prompt(
     prompt_in: PromptCreate,
     db: Session = Depends(get_db),
@@ -40,7 +42,7 @@ def create_prompt(
     return prompt_service.create_prompt(db, prompt_in)
 
 
-@router.get("/next", response_model=PromptRotationResponse)
+@router.get("/next", response_model=PromptRotationResponse, dependencies=[_collector_dep])
 def get_next_prompt_for_session(
     session_id: UUID = Query(..., description="ID de la session en cours"),
     exclude_ids: Optional[str] = Query(
@@ -65,7 +67,7 @@ def get_next_prompt_for_session(
         raise HTTPException(status_code=404, detail=str(e))
 
 
-@router.get("/{prompt_id}", response_model=PromptRead)
+@router.get("/{prompt_id}", response_model=PromptRead, dependencies=[_collector_dep])
 def get_prompt(
     prompt_id: UUID,
     db: Session = Depends(get_db),
@@ -76,7 +78,7 @@ def get_prompt(
     return prompt
 
 
-@router.post("/{prompt_id}/media", response_model=PromptRead)
+@router.post("/{prompt_id}/media", response_model=PromptRead, dependencies=[_collector_dep])
 async def upload_prompt_media(
     prompt_id: UUID,
     file: UploadFile = File(...),
@@ -116,7 +118,7 @@ def stream_prompt_media(
         raise HTTPException(status_code=500, detail=f"Erreur de lecture image MinIO: {e}")
 
 
-@router.post("/{prompt_id}/toggle", response_model=PromptRead)
+@router.post("/{prompt_id}/toggle", response_model=PromptRead, dependencies=[_collector_dep])
 def toggle_prompt(
     prompt_id: UUID,
     db: Session = Depends(get_db),

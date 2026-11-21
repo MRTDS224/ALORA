@@ -5,10 +5,15 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.schemas.segment import SegmentCreate, SegmentRead, WordAnnotationCreate, WordAnnotationRead
+from app.services import auth as auth_service
 from app.services import segmentation as segmentation_service
 from app.services import recording as recording_service
 
-router = APIRouter(prefix="/api/recordings", tags=["Segmentation & Praat TextGrid"])
+router = APIRouter(
+    prefix="/api/recordings",
+    tags=["Segmentation & Praat TextGrid"],
+    dependencies=[Depends(auth_service.require_api_roles("reviewer", "admin"))],
+)
 
 @router.post("/{recording_id}/segments", response_model=SegmentRead, status_code=status.HTTP_201_CREATED)
 def create_segment(

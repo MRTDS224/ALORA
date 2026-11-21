@@ -5,10 +5,15 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.schemas.transcription import TranscriptionCreate, TranscriptionRead
+from app.services import auth as auth_service
 from app.services import transcription as transcription_service
 from app.services import recording as recording_service
 
-router = APIRouter(prefix="/api/transcriptions", tags=["Transcriptions"])
+router = APIRouter(
+    prefix="/api/transcriptions",
+    tags=["Transcriptions"],
+    dependencies=[Depends(auth_service.require_api_roles("reviewer", "admin"))],
+)
 
 @router.get("", response_model=List[TranscriptionRead])
 def list_transcriptions(

@@ -6,10 +6,16 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.schemas.recording import RecordingRead
+from app.services import auth as auth_service
 from app.services import recording as recording_service
 from app.services.storage import storage_service
 
-router = APIRouter(prefix="/api/recordings", tags=["Recordings"])
+router = APIRouter(
+    prefix="/api/recordings",
+    tags=["Recordings"],
+    dependencies=[Depends(auth_service.require_api_roles("collector", "reviewer", "admin"))],
+)
+_reviewer_dep = Depends(auth_service.require_api_roles("reviewer", "admin"))
 
 @router.get("", response_model=List[RecordingRead])
 def list_recordings(
@@ -93,7 +99,7 @@ def stream_audio(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur de lecture audio MinIO: {e}")
 
-@router.post("/{recording_id}/validate", response_model=RecordingRead)
+@router.post("/{recording_id}/validate", response_model=RecordingRead, dependencies=[_reviewer_dep])
 def validate_recording(
     recording_id: UUID,
     audio_quality: str = Form("good"),
@@ -125,7 +131,7 @@ def validate_recording(
     quality_service.create_quality_annotation(db, qual_in, recording_status="validated")
     return recording_service.get_recording_by_id(db, recording_id)
 
-@router.post("/{recording_id}/reject", response_model=RecordingRead)
+@router.post("/{recording_id}/reject", response_model=RecordingRead, dependencies=[_reviewer_dep])
 def reject_recording(
     recording_id: UUID,
     audio_quality: str = Form("poor"),

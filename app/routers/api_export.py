@@ -3,9 +3,14 @@ from fastapi import APIRouter, Depends, Response, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.services import auth as auth_service
 from app.services import export as export_service
 
-router = APIRouter(prefix="/api/export", tags=["Corpus Export"])
+router = APIRouter(
+    prefix="/api/export",
+    tags=["Corpus Export"],
+    dependencies=[Depends(auth_service.require_api_roles("admin"))],
+)
 
 
 @router.get("/corpus")

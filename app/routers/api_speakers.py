@@ -5,10 +5,15 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.schemas.speaker import SpeakerCreate, SpeakerRead
+from app.services import auth as auth_service
 from app.services import speaker as speaker_service
 from app.services.storage import storage_service
 
-router = APIRouter(prefix="/api/speakers", tags=["Speakers"])
+router = APIRouter(
+    prefix="/api/speakers",
+    tags=["Speakers"],
+    dependencies=[Depends(auth_service.require_api_roles("collector", "reviewer", "admin"))],
+)
 
 
 @router.get("", response_model=List[SpeakerRead])
