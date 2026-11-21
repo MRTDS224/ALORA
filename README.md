@@ -2,6 +2,12 @@
   <img src="static/img/alora-logo.png" alt="ALORA — Automatic Learning for Oral Resource-poor African Languages" width="440">
 </p>
 
+<p align="center">
+  <a href="https://github.com/MRTDS224/ALORA/actions/workflows/ci.yml"><img src="https://github.com/MRTDS224/ALORA/actions/workflows/ci.yml/badge.svg" alt="CI Status"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/Code-MIT-blue.svg" alt="MIT License"></a>
+  <a href="https://creativecommons.org/licenses/by/4.0/"><img src="https://img.shields.io/badge/Corpus-CC%20BY%204.0-lightgrey.svg" alt="CC BY 4.0"></a>
+</p>
+
 # 🌍 ALORA — Automatic Learning for Oral Resource-poor African Languages
 
 **ALORA** est une plateforme scientifique open-source et modulaire dédiée à la collecte collaborative, à la validation acoustique, à la transcription versionnée et à l'exportation de corpus oraux pour les langues africaines peu dotées — inaugurée sur la langue **Soussou (`sus`)** parlée en Guinée.

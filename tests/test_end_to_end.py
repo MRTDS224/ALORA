@@ -25,15 +25,19 @@ def _admin_client() -> TestClient:
     return c
 
 
-client = _admin_client()
+@pytest.fixture(scope="module")
+def client() -> TestClient:
+    return _admin_client()
 
-def test_health_endpoint():
+
+def test_health_endpoint(client: TestClient):
     response = client.get("/health")
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "healthy"
 
-def test_full_corpus_lifecycle():
+
+def test_full_corpus_lifecycle(client: TestClient):
     # 1. Ensure MinIO bucket exists
     storage_service.ensure_bucket_exists()
 
