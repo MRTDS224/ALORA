@@ -87,7 +87,8 @@ uv run uvicorn app.main:app --reload --port 8000
 
 | Route Web / API | Rôle & Description |
 | :--- | :--- |
-| **`GET /`** | 📊 **Tableau de bord** (Durée cumulée, statistiques locuteurs, état du pipeline) |
+| **`GET /`** | 🌍 **Page d'accueil & Présentation** (Vision scientifique, pipeline 6 étapes, architecture, feuille de route & accès modules) |
+| **`GET /dashboard`** | 📊 **Tableau de bord** (Durée cumulée, statistiques locuteurs, état du pipeline) |
 | **`GET /record`** | 🎙️ **Studio de collecte Web** (Capture micro live, chronomètre, prévisualisation & upload) |
 | **`GET /recordings`** | 🎧 **Registre des enregistrements** & filtrage par statut |
 | **`GET /recordings/{id}`** | 🔍 **Fiche d'évaluation qualité** (Lecteur audio stream MinIO, formulaire validation/rejet) |

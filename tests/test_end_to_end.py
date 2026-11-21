@@ -129,6 +129,7 @@ def test_full_corpus_lifecycle():
 
     # 12. Check Web Interface Routes (HTML 200 OK)
     assert client.get("/").status_code == 200
+    assert client.get("/dashboard").status_code == 200
     assert client.get("/speakers").status_code == 200
     assert client.get("/sessions").status_code == 200
     assert client.get("/prompts").status_code == 200

@@ -4,35 +4,56 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}ALORA — Automatic Learning for Oral Resource-poor African Languages{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/style.css">
   {% block extra_head %}{% endblock %}
 </head>
 <body>
-  <header>
-    <div class="brand">
-      <h1>ALORA</h1>
-      <span class="brand-badge">Susu Corpus</span>
+  <a href="#main-content" class="skip-link visually-hidden">Aller au contenu principal</a>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand">
+        <a href="/" class="brand-link">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 28 28" fill="none">
+              <rect x="2" y="10" width="3.5" height="8" rx="1.75" fill="currentColor" opacity="0.7"/>
+              <rect x="8.5" y="5" width="3.5" height="18" rx="1.75" fill="currentColor"/>
+              <rect x="15" y="2" width="3.5" height="24" rx="1.75" fill="#f59e0b"/>
+              <rect x="21.5" y="8" width="3.5" height="12" rx="1.75" fill="#34d399"/>
+            </svg>
+          </span>
+          <span class="brand-title">ALORA</span>
+          <span class="brand-badge">Soussou · sus</span>
+        </a>
+      </div>
+      <nav aria-label="Principale">
+        <ul>
+          <li><a href="/" class="{% if request.url.path == '/' %}active{% endif %}">Accueil</a></li>
+          <li><a href="/dashboard" class="{% if request.url.path == '/dashboard' %}active{% endif %}">Tableau de Bord</a></li>
+          <li><a href="/speakers" class="{% if '/speakers' in request.url.path %}active{% endif %}">Locuteurs</a></li>
+          <li><a href="/sessions" class="{% if '/sessions' in request.url.path %}active{% endif %}">Sessions</a></li>
+          <li><a href="/prompts" class="{% if '/prompts' in request.url.path %}active{% endif %}">Prompts</a></li>
+          <li><a href="/record" class="{% if '/record' in request.url.path %}active{% endif %}">Collecte</a></li>
+          <li><a href="/recordings" class="{% if '/recordings' in request.url.path %}active{% endif %}">Validation</a></li>
+          <li><a href="/transcriptions" class="{% if '/transcriptions' in request.url.path %}active{% endif %}">Transcription</a></li>
+        </ul>
+      </nav>
     </div>
-    <nav>
-      <ul>
-        <li><a href="/" class="{% if request.url.path == '/' %}active{% endif %}">Tableau de Bord</a></li>
-        <li><a href="/speakers" class="{% if '/speakers' in request.url.path %}active{% endif %}">Locuteurs</a></li>
-        <li><a href="/sessions" class="{% if '/sessions' in request.url.path %}active{% endif %}">Sessions</a></li>
-        <li><a href="/prompts" class="{% if '/prompts' in request.url.path %}active{% endif %}">Prompts</a></li>
-        <li><a href="/record" class="{% if '/record' in request.url.path %}active{% endif %}">🎙️ Collecte</a></li>
-        <li><a href="/recordings" class="{% if '/recordings' in request.url.path %}active{% endif %}">Validation</a></li>
-        <li><a href="/transcriptions" class="{% if '/transcriptions' in request.url.path %}active{% endif %}">Transcription</a></li>
-      </ul>
-    </nav>
   </header>
 
-  <main class="container">
+  <main {% block main_id %}id="main-content" tabindex="-1"{% endblock %} class="{% block main_class %}container{% endblock %}">
     {% block content %}{% endblock %}
   </main>
 
   <footer>
-    <p>ALORA — Automatic Learning for Oral Resource-poor African Languages (Soussou — Guinée)</p>
-    <p>Data First • Prototype de recherche scientifique • {{ current_year }}</p>
+    <p>ALORA — <span lang="en">Automatic Learning for Oral Resource-poor African Languages</span> (Soussou — Guinée)</p>
+    <p>
+      Data First • Projet de recherche scientifique • {{ current_year or 2026 }} •
+      <a href="https://github.com/MRTDS224/ALORA" target="_blank" rel="noopener noreferrer">GitHub MRTDS224/ALORA</a>
+    </p>
   </footer>
 
   {% block extra_scripts %}{% endblock %}

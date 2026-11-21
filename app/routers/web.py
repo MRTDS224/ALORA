@@ -1,3 +1,4 @@
+import datetime
 from typing import Optional
 from uuid import UUID
 from fastapi import APIRouter, Depends, Request, Form, Response
@@ -15,11 +16,19 @@ from app.schemas.session import SessionCreate
 from app.schemas.prompt import PromptCreate
 
 templates = Jinja2Templates(directory="app/templates")
+templates.env.globals["current_year"] = datetime.datetime.now().year
 
 web_router = APIRouter(tags=["Web Pages"])
 
-# --- DASHBOARD ---
+
+# --- HOME (PAGE D'ACCUEIL / PRÉSENTATION DU PROJET) ---
 @web_router.get("/", response_class=HTMLResponse)
+def page_home(request: Request):
+    return templates.TemplateResponse(request=request, name="home.html", context={})
+
+
+# --- DASHBOARD ---
+@web_router.get("/dashboard", response_class=HTMLResponse)
 def page_dashboard(request: Request, db: Session = Depends(get_db)):
     from app.services import stats as stats_service
     stats = stats_service.get_dashboard_stats(db)
