@@ -1,4 +1,6 @@
 import datetime
+import hashlib
+from pathlib import Path
 from typing import Optional
 from uuid import UUID
 from fastapi import APIRouter, Depends, Request, Form, Response, UploadFile, File
@@ -17,6 +19,19 @@ from app.schemas.prompt import PromptCreate
 
 templates = Jinja2Templates(directory="app/templates")
 templates.env.globals["current_year"] = datetime.datetime.now().year
+
+
+def static_url(asset_path: str) -> str:
+    """Returns /static/<path>?v=<short-hash> so browsers never serve stale CSS/JS."""
+    clean = asset_path.lstrip("/")
+    file_path = Path("static") / clean
+    if file_path.is_file():
+        digest = hashlib.md5(file_path.read_bytes()).hexdigest()[:8]
+        return f"/static/{clean}?v={digest}"
+    return f"/static/{clean}"
+
+
+templates.env.globals["static_url"] = static_url
 
 web_router = APIRouter(tags=["Web Pages"])
 
