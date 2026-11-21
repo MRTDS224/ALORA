@@ -1,10 +1,29 @@
 import pytest
 from fastapi.testclient import TestClient
+from app.core.config import settings
 from app.main import app
 from app.core.database import SessionLocal
+from app.services.auth import ensure_default_admin
 from app.services.storage import storage_service
 
-client = TestClient(app)
+
+def _admin_client() -> TestClient:
+    db = SessionLocal()
+    try:
+        ensure_default_admin(db)
+    finally:
+        db.close()
+    c = TestClient(app)
+    res = c.post(
+        "/login",
+        data={"email": settings.ADMIN_EMAIL, "password": settings.ADMIN_PASSWORD},
+        follow_redirects=False,
+    )
+    assert res.status_code == 303
+    return c
+
+
+client = _admin_client()
 
 def test_health_endpoint():
     response = client.get("/health")

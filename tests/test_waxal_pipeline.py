@@ -130,9 +130,24 @@ def test_speaker_disjoint_small_corpus_stays_in_train():
 def test_e2e_waxal_image_elicitation_rotation_consent_and_export():
     """End-to-end API test covering image prompts, rotation, oral consent, QA metrics, and validated export."""
     from fastapi.testclient import TestClient
+    from app.core.config import settings
+    from app.core.database import SessionLocal
     from app.main import app
+    from app.services.auth import ensure_default_admin
+
+    db = SessionLocal()
+    try:
+        ensure_default_admin(db)
+    finally:
+        db.close()
 
     client = TestClient(app)
+    login_res = client.post(
+        "/login",
+        data={"email": settings.ADMIN_EMAIL, "password": settings.ADMIN_PASSWORD},
+        follow_redirects=False,
+    )
+    assert login_res.status_code == 303
 
     # 1. Create Speaker & upload oral consent audio
     spk_res = client.post("/api/speakers", json={
@@ -237,4 +252,7 @@ def test_e2e_waxal_image_elicitation_rotation_consent_and_export():
         assert manifest["speaker_disjoint"] is True
         rec_csv = zf.read("metadata/recordings.csv").decode("utf-8")
         assert rec["recording_code"] not in rec_csv
+
+    # Cleanup: deactivate synthetic 1x1 PNG test prompt so it never appears on /contribuer
+    client.post(f"/api/prompts/{p_id}/toggle")
 
