@@ -1,0 +1,39 @@
+# Render Blueprint — déploie ALORA (Docker + FFmpeg) + PostgreSQL gratuit en 1 clic
+# Usage sur Render : New -> Blueprint -> sélectionnez votre dépôt GitHub ALORA
+
+databases:
+  - name: alora-db
+    databaseName: alora_db
+    user: alora_user
+    plan: free
+
+services:
+  - type: web
+    name: alora-web
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: APP_NAME
+        value: ALORA
+      - key: APP_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: alora-db
+          property: connectionString
+      # Mode démo sans MinIO/S3 externe (passez à "minio" + Cloudflare R2 pour la collecte terrain durable)
+      - key: STORAGE_BACKEND
+        value: local
+      - key: LOCAL_STORAGE_DIR
+        value: /tmp/alora-storage
+      - key: ADMIN_EMAIL
+        value: mrtdsow@outlook.com
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: ADMIN_FULL_NAME
+        value: Diallo Mamadou Tahirou
+      - key: SESSION_MAX_AGE_SECONDS
+        value: "604800"

@@ -114,6 +114,26 @@ def seed_all(seed_dir: Path = Path("seed_data")) -> None:
                             .first()
                         )
                         if existing:
+                            # Restore missing media file (e.g. after ephemeral container restart in local storage mode)
+                            if existing.media_object_key and not storage_service.object_exists(str(existing.media_object_key)):
+                                img_path = images_dir / row["image_filename"]
+                                restore_bytes = None
+                                if img_path.is_file():
+                                    restore_bytes = img_path.read_bytes()
+                                elif row.get("thumb_url"):
+                                    try:
+                                        r = client.get(row["thumb_url"], timeout=25.0)
+                                        r.raise_for_status()
+                                        restore_bytes = r.content
+                                        img_path.write_bytes(restore_bytes)
+                                    except Exception as exc:
+                                        print(f"[WARN] Could not restore {title}: {exc}")
+                                if restore_bytes:
+                                    storage_service.upload_file(
+                                        file_bytes=restore_bytes,
+                                        object_key=str(existing.media_object_key),
+                                        content_type=row.get("content_type") or "image/jpeg",
+                                    )
                             skipped_images += 1
                             continue
 

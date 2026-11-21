@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="ALORA waveform mark">
+  <g transform="translate(60 60) scale(14)">
+    <rect x="2" y="10" width="3.5" height="8" rx="1.75" fill="#f1c27d"/>
+    <rect x="8.5" y="5" width="3.5" height="18" rx="1.75" fill="#ffffff"/>
+    <rect x="15" y="2" width="3.5" height="24" rx="1.75" fill="#e3a33b"/>
+    <rect x="21.5" y="8" width="3.5" height="12" rx="1.75" fill="#e07a52"/>
+  </g>
+</svg>
