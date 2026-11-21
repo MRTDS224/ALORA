@@ -9,6 +9,7 @@ class SessionBase(BaseModel):
     location: Optional[str] = None
     environment: Optional[str] = "quiet_room"
     target_task: str = "asr"  # asr or tts
+    source: str = "field_agent"  # field_agent or public_web
     device: Optional[str] = "smartphone_mic"
     collector: Optional[str] = None
     notes: Optional[str] = None

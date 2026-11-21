@@ -21,7 +21,11 @@ def generate_prompt_code(db: Session) -> str:
     return f"PRM_{count + 1:06d}"
 
 
-def create_prompt(db: Session, prompt_in: PromptCreate) -> Prompt:
+def create_prompt(
+    db: Session,
+    prompt_in: PromptCreate,
+    created_by_user_id: Optional[UUID] = None,
+) -> Prompt:
     code = prompt_in.prompt_code or generate_prompt_code(db)
     min_dur = prompt_in.min_duration_seconds
     if min_dur is None and prompt_in.prompt_type == "image":
@@ -35,7 +39,10 @@ def create_prompt(db: Session, prompt_in: PromptCreate) -> Prompt:
         content=prompt_in.content,
         media_object_key=prompt_in.media_object_key,
         media_content_type=prompt_in.media_content_type,
+        media_license=prompt_in.media_license,
+        media_attribution=prompt_in.media_attribution,
         min_duration_seconds=min_dur,
+        created_by_user_id=created_by_user_id,
         language=prompt_in.language,
         topic=prompt_in.topic,
         difficulty=prompt_in.difficulty,

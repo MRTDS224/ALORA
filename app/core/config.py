@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     MINIO_BUCKET_NAME: str = "alora-storage"
     MINIO_SECURE: bool = False
 
+    # Initial Admin Bootstrap & Auth
+    ADMIN_EMAIL: str = "admin@alora.local"
+    ADMIN_PASSWORD: str = "alora-admin-2026"
+    ADMIN_FULL_NAME: str = "Administrateur ALORA"
+    SESSION_MAX_AGE_SECONDS: int = 60 * 60 * 24 * 7  # 7 days
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

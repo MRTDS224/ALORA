@@ -13,6 +13,19 @@ def generate_uuid():
 def now_utc():
     return datetime.datetime.now(datetime.timezone.utc)
 
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=generate_uuid)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    full_name = Column(String(150), nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    role = Column(String(30), nullable=False, default="collector")  # collector, reviewer, admin
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=now_utc, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=now_utc, onupdate=now_utc, nullable=False)
+
 class Speaker(Base):
     __tablename__ = "speakers"
 
@@ -42,7 +55,8 @@ class Session(Base):
     location = Column(String(100), nullable=True)
     environment = Column(String(100), nullable=True) # e.g. indoor, quiet_room, outdoor
     target_task = Column(String(20), nullable=False, default="asr") # asr (field/spontaneous) or tts (studio/scripted)
-    device = Column(String(100), nullable=True)      # e.g. browser_mic, smartphone
+    source = Column(String(30), nullable=False, default="field_agent") # field_agent or public_web
+    device = Column(String(100), nullable=True)      # e.g. smartphone_mic, usb_mic
     collector = Column(String(100), nullable=True)
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), default=now_utc, nullable=False)
@@ -62,7 +76,10 @@ class Prompt(Base):
     content = Column(Text, nullable=False)
     media_object_key = Column(String(500), nullable=True) # Image key in MinIO for visual elicitation
     media_content_type = Column(String(100), nullable=True)
+    media_license = Column(String(120), nullable=True)
+    media_attribution = Column(String(500), nullable=True)
     min_duration_seconds = Column(Float, nullable=True) # Recommended minimum duration (e.g., 15.0s for ASR images)
+    created_by_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     language = Column(String(20), nullable=False, default="sus") # Susu
     topic = Column(String(100), nullable=True)
     difficulty = Column(String(20), nullable=True)

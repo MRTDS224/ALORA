@@ -46,3 +46,6 @@ htmlcov/
 
 # Documentation & Local Notes
 docs/
+
+# Seeded prompt images (downloaded locally via scripts/fetch_seed_images.py)
+seed_data/images/

@@ -18,12 +18,16 @@ class PromptCreate(PromptBase):
     prompt_code: Optional[str] = None # Generated automatically (PRM_000001)
     media_object_key: Optional[str] = None
     media_content_type: Optional[str] = None
+    media_license: Optional[str] = None
+    media_attribution: Optional[str] = None
 
 class PromptRead(PromptBase):
     id: UUID
     prompt_code: str
     media_object_key: Optional[str] = None
     media_content_type: Optional[str] = None
+    media_license: Optional[str] = None
+    media_attribution: Optional[str] = None
     created_at: datetime.datetime
 
     model_config = ConfigDict(from_attributes=True)
