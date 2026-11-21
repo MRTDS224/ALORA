@@ -1,10 +1,22 @@
 [project]
 name = "alora"
-version = "0.1.0"
-description = "Add your description here"
+version = "0.4.0"
+description = "ALORA — Open-source oral speech corpus platform (WAXAL-inspired) for under-resourced African languages, starting with Susu (Guinea)"
 readme = "README.md"
+license = { text = "MIT" }
 authors = [
-    { name = "Diallo Mamadou Tahirou", email = "mrtdsow@outlook.com" }
+    { name = "Mamadou Tahirou Diallo", email = "mrtdsow@outlook.com" }
+]
+keywords = [
+    "speech-corpus",
+    "asr",
+    "tts",
+    "nlp",
+    "susu",
+    "african-languages",
+    "low-resource",
+    "waxal",
+    "fastapi",
 ]
 requires-python = ">=3.12"
 dependencies = [
@@ -23,12 +35,21 @@ dependencies = [
     "uvicorn[standard]>=0.52.4",
 ]
 
+[project.urls]
+Homepage = "https://github.com/MRTDS224/ALORA"
+Repository = "https://github.com/MRTDS224/ALORA"
+Issues = "https://github.com/MRTDS224/ALORA/issues"
+
 [project.scripts]
 alora = "alora:main"
 
 [build-system]
 requires = ["uv_build>=0.12.3,<0.13.0"]
 build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
 
 [tool.pyright]
 extraPaths = ["."]
