@@ -8,6 +8,9 @@
 
 Initié dans le cadre d'un projet de recherche à l'**INPT Rabat** (Maroc), ALORA adopte une approche **Data-First** inspirée des bonnes pratiques du corpus **WAXAL** (*Google Research*, arXiv:2602.02734).
 
+> 🌐 **Plateforme en ligne (Google Cloud Run) :** [https://alora-git-360095154117.europe-west1.run.app/](https://alora-git-360095154117.europe-west1.run.app/)  
+> 🎙️ **Participer en soussou (sans compte, mobile) :** [https://alora-git-360095154117.europe-west1.run.app/contribuer](https://alora-git-360095154117.europe-west1.run.app/contribuer)
+
 ---
 
 ## ✨ Fonctionnalités Clés (v0.4.0)
@@ -118,6 +121,12 @@ adb reverse tcp:8000 tcp:8000
 # Puis ouvrir http://localhost:8000/contribuer sur le téléphone
 ```
 *(Ou via tunnel HTTPS temporaire : `cloudflared tunnel --url http://127.0.0.1:8000`.)*
+
+### ☁️ Déploiement Cloud (Google Cloud Run / Docker)
+ALORA inclut un [Dockerfile](Dockerfile) (Python 3.12 + `uv` + `ffmpeg`), un script d'entrée [scripts/entrypoint.sh](scripts/entrypoint.sh) (migrations Alembic + seeding idempotent) et un Blueprint [render.yaml](render.yaml). En production sur **Google Cloud Platform** :
+- **Serveur Web :** Cloud Run (`europe-west1`, HTTPS automatique, port `8080`).
+- **Base de données :** Cloud SQL for PostgreSQL via `DATABASE_URL`.
+- **Stockage objet :** Google Cloud Storage (`STORAGE_BACKEND=minio`, `MINIO_ENDPOINT=storage.googleapis.com`, clés HMAC, `MINIO_SECURE=true`).
 
 ---
 
