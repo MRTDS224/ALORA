@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.models import Prompt, Recording, Session as SessionModel
-from app.schemas.prompt import PromptCreate
+from app.schemas.prompt import PromptCreate, PromptUpdate
 from app.services.storage import storage_service
 
 ALLOWED_IMAGE_TYPES = {
@@ -130,6 +130,53 @@ def toggle_prompt_active(db: Session, prompt_id: UUID) -> Optional[Prompt]:
         db.commit()
         db.refresh(prompt)
     return prompt
+
+
+def update_prompt(
+    db: Session,
+    prompt_id: UUID,
+    prompt_in: PromptUpdate,
+) -> Optional[Prompt]:
+    prompt = get_prompt_by_id(db, prompt_id)
+    if not prompt:
+        return None
+
+    updates = prompt_in.model_dump(exclude_unset=True)
+    for field, value in updates.items():
+        if isinstance(value, str) and field in {"title", "content", "description", "topic", "media_license", "media_attribution"}:
+            cleaned = value.strip()
+            if field in {"description", "topic", "media_license", "media_attribution"}:
+                value = cleaned or None
+            else:
+                value = cleaned
+        setattr(prompt, field, value)
+
+    db.commit()
+    db.refresh(prompt)
+    return prompt
+
+
+def count_prompt_recordings(db: Session, prompt_id: UUID) -> int:
+    return int(
+        db.query(func.count(Recording.id))
+        .filter(Recording.prompt_id == prompt_id)
+        .scalar()
+        or 0
+    )
+
+
+def delete_prompt(db: Session, prompt_id: UUID) -> bool:
+    prompt = get_prompt_by_id(db, prompt_id)
+    if not prompt:
+        return False
+    rec_count = count_prompt_recordings(db, prompt_id)
+    if rec_count > 0:
+        raise ValueError(
+            f"Impossible de supprimer ce prompt : {rec_count} enregistrement(s) y sont déjà rattachés. Désactivez-le plutôt."
+        )
+    db.delete(prompt)
+    db.commit()
+    return True
 
 
 def get_next_prompt_for_session(

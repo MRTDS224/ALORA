@@ -21,6 +21,20 @@ class PromptCreate(PromptBase):
     media_license: Optional[str] = None
     media_attribution: Optional[str] = None
 
+
+class PromptUpdate(BaseModel):
+    prompt_type: Optional[str] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    content: Optional[str] = None
+    min_duration_seconds: Optional[float] = None
+    language: Optional[str] = None
+    topic: Optional[str] = None
+    difficulty: Optional[str] = None
+    active: Optional[bool] = None
+    media_license: Optional[str] = None
+    media_attribution: Optional[str] = None
+
 class PromptRead(PromptBase):
     id: UUID
     prompt_code: str

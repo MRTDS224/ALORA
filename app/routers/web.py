@@ -19,7 +19,7 @@ from app.core.security import (
     sign_token,
 )
 from app.models import User
-from app.schemas.prompt import PromptCreate
+from app.schemas.prompt import PromptCreate, PromptUpdate
 from app.schemas.session import SessionCreate
 from app.schemas.speaker import SpeakerCreate
 from app.services import auth as auth_service
@@ -452,11 +452,119 @@ async def handle_batch_upload_prompts(
 
 @web_router.post("/prompts/{prompt_id}/toggle")
 def handle_toggle_prompt(
-    prompt_id: str,
+    prompt_id: UUID,
+    next: Optional[str] = Form(None),
     current_user: User = Depends(auth_service.require_web_roles(*COLLECTOR_ROLES)),
     db: Session = Depends(get_db),
 ):
-    prompt_service.toggle_prompt_active(db, UUID(prompt_id))
+    prompt_service.toggle_prompt_active(db, prompt_id)
+    dest = next if (next and next.startswith("/") and not next.startswith("//")) else "/prompts"
+    return RedirectResponse(url=dest, status_code=303)
+
+
+@web_router.get("/prompts/{prompt_id}", response_class=HTMLResponse)
+def page_prompt_detail(
+    request: Request,
+    prompt_id: UUID,
+    saved: Optional[str] = None,
+    error: Optional[str] = None,
+    current_user: User = Depends(auth_service.require_web_roles(*COLLECTOR_ROLES)),
+    db: Session = Depends(get_db),
+):
+    prompt = prompt_service.get_prompt_by_id(db, prompt_id)
+    if not prompt:
+        return RedirectResponse(url="/prompts", status_code=303)
+    recordings_count = prompt_service.count_prompt_recordings(db, prompt_id)
+    return templates.TemplateResponse(
+        request=request,
+        name="prompt_detail.html",
+        context={
+            "prompt": prompt,
+            "recordings_count": recordings_count,
+            "saved": saved == "1",
+            "error": error,
+            "current_user": current_user,
+        },
+    )
+
+
+@web_router.post("/prompts/{prompt_id}/edit")
+async def handle_edit_prompt(
+    prompt_id: UUID,
+    title: str = Form(...),
+    content: str = Form(...),
+    prompt_type: str = Form("image"),
+    description: Optional[str] = Form(None),
+    topic: Optional[str] = Form(None),
+    difficulty: str = Form("easy"),
+    min_duration_seconds: Optional[str] = Form(None),
+    media_license: Optional[str] = Form(None),
+    media_attribution: Optional[str] = Form(None),
+    active: Optional[str] = Form(None),
+    image_file: Optional[UploadFile] = File(None),
+    current_user: User = Depends(auth_service.require_web_roles(*COLLECTOR_ROLES)),
+    db: Session = Depends(get_db),
+):
+    parsed_min_dur: Optional[float] = None
+    if min_duration_seconds and min_duration_seconds.strip():
+        try:
+            parsed_min_dur = float(min_duration_seconds.strip())
+        except ValueError:
+            parsed_min_dur = None
+
+    updated = prompt_service.update_prompt(
+        db,
+        prompt_id,
+        PromptUpdate(
+            title=title,
+            content=content,
+            prompt_type=prompt_type,
+            description=description,
+            topic=topic,
+            difficulty=difficulty,
+            min_duration_seconds=parsed_min_dur,
+            media_license=media_license,
+            media_attribution=media_attribution,
+            active=(active == "on"),
+        ),
+    )
+    if not updated:
+        return RedirectResponse(url="/prompts", status_code=303)
+
+    if image_file and image_file.filename:
+        image_bytes = await image_file.read()
+        if image_bytes:
+            try:
+                prompt_service.attach_prompt_media(
+                    db=db,
+                    prompt_id=prompt_id,
+                    image_bytes=image_bytes,
+                    content_type=image_file.content_type or "image/jpeg",
+                )
+            except ValueError as e:
+                from urllib.parse import quote as url_quote
+                return RedirectResponse(
+                    url=f"/prompts/{prompt_id}?error={url_quote(str(e))}",
+                    status_code=303,
+                )
+
+    return RedirectResponse(url=f"/prompts/{prompt_id}?saved=1", status_code=303)
+
+
+@web_router.post("/prompts/{prompt_id}/delete")
+def handle_delete_prompt(
+    prompt_id: UUID,
+    current_user: User = Depends(auth_service.require_web_roles(*REVIEWER_ROLES)),
+    db: Session = Depends(get_db),
+):
+    try:
+        prompt_service.delete_prompt(db, prompt_id)
+    except ValueError as e:
+        from urllib.parse import quote as url_quote
+        return RedirectResponse(
+            url=f"/prompts/{prompt_id}?error={url_quote(str(e))}",
+            status_code=303,
+        )
     return RedirectResponse(url="/prompts", status_code=303)
 
 

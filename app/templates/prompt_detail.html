@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block title %}{{ prompt.prompt_code }} — {{ prompt.title }} — ALORA{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ prompt.prompt_code }} — {{ prompt.title }}</h1>
+    <p class="subtitle">Visualisation complète et édition du stimulus (texte, métadonnées et image).</p>
+  </div>
+  <div class="page-actions" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+    <a href="/prompts" class="btn btn-secondary">← Retour au catalogue</a>
+    <form action="/prompts/{{ prompt.id }}/toggle" method="POST" style="display: inline;">
+      <input type="hidden" name="next" value="/prompts/{{ prompt.id }}">
+      <button type="submit" class="btn {% if prompt.active %}btn-secondary{% else %}btn-primary{% endif %}">
+        {% if prompt.active %}Désactiver{% else %}Activer{% endif %}
+      </button>
+    </form>
+  </div>
+</div>
+
+{% if saved %}
+<div class="alert alert-success" role="status">
+  Modifications enregistrées avec succès.
+</div>
+{% endif %}
+
+{% if error %}
+<div class="alert alert-danger" role="alert">
+  {{ error }}
+</div>
+{% endif %}
+
+<div class="layout-split">
+  <!-- Aperçu / Visualisation complète -->
+  <section class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+      <h3 style="margin: 0;">Aperçu du Stimulus</h3>
+      <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+        <span class="badge {% if prompt.prompt_type == 'image' %}badge-asr{% else %}badge-uploaded{% endif %}">{{ prompt.prompt_type }}</span>
+        <span class="badge {% if prompt.active %}badge-validated{% else %}badge-rejected{% endif %}">
+          {% if prompt.active %}Actif{% else %}Inactif{% endif %}
+        </span>
+        {% if prompt.min_duration_seconds %}
+        <span class="badge badge-validating">≥ {{ prompt.min_duration_seconds|int }}s</span>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if prompt.media_object_key %}
+    <div style="margin-bottom: 1rem; text-align: center; background: var(--neutral-100); border-radius: 12px; padding: 0.75rem;">
+      <a href="/api/prompts/{{ prompt.id }}/media" target="_blank" rel="noopener noreferrer" title="Ouvrir l'image en plein écran">
+        <img
+          src="/api/prompts/{{ prompt.id }}/media"
+          alt="{{ prompt.title }}"
+          style="max-width: 100%; max-height: 420px; border-radius: 8px; object-fit: contain; display: block; margin: 0 auto;"
+        >
+      </a>
+      <small style="display: block; margin-top: 0.5rem; color: var(--neutral-600);">Cliquez sur l'image pour l'ouvrir en plein écran</small>
+    </div>
+    {% endif %}
+
+    <div style="background: var(--neutral-100); border-radius: 10px; padding: 1rem; margin-bottom: 1rem;">
+      <div style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--neutral-600); margin-bottom: 0.3rem;">Consigne / Texte affiché au locuteur</div>
+      <div style="font-size: 1.05rem; font-weight: 600; color: var(--neutral-900);">{{ prompt.content }}</div>
+      {% if prompt.description %}
+      <div style="margin-top: 0.6rem; font-size: 0.9rem; color: var(--neutral-700);">
+        <strong>Notes / Traduction :</strong> {{ prompt.description }}
+      </div>
+      {% endif %}
+    </div>
+
+    <dl style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; font-size: 0.9rem; margin: 0;">
+      <div>
+        <dt style="color: var(--neutral-600); font-size: 0.78rem;">Domaine / Thème</dt>
+        <dd style="margin: 0.15rem 0 0; font-weight: 600;">{{ prompt.topic or '—' }}</dd>
+      </div>
+      <div>
+        <dt style="color: var(--neutral-600); font-size: 0.78rem;">Difficulté</dt>
+        <dd style="margin: 0.15rem 0 0; font-weight: 600;">{{ prompt.difficulty or 'easy' }}</dd>
+      </div>
+      <div>
+        <dt style="color: var(--neutral-600); font-size: 0.78rem;">Enregistrements collectés</dt>
+        <dd style="margin: 0.15rem 0 0; font-weight: 600;">{{ recordings_count }}</dd>
+      </div>
+      <div>
+        <dt style="color: var(--neutral-600); font-size: 0.78rem;">Créé le</dt>
+        <dd style="margin: 0.15rem 0 0; font-weight: 600;">{{ prompt.created_at.strftime('%d/%m/%Y %H:%M') if prompt.created_at else '—' }}</dd>
+      </div>
+      <div>
+        <dt style="color: var(--neutral-600); font-size: 0.78rem;">Licence média</dt>
+        <dd style="margin: 0.15rem 0 0; font-weight: 600;">{{ prompt.media_license or '—' }}</dd>
+      </div>
+      <div>
+        <dt style="color: var(--neutral-600); font-size: 0.78rem;">Attribution / Crédit</dt>
+        <dd style="margin: 0.15rem 0 0; font-weight: 600; word-break: break-word;">{{ prompt.media_attribution or '—' }}</dd>
+      </div>
+    </dl>
+
+    {% if current_user and current_user.role in ['reviewer', 'admin'] %}
+    <hr style="border: none; border-top: 1px solid var(--neutral-200); margin: 1.25rem 0;">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+      <small style="color: var(--neutral-600);">
+        {% if recordings_count > 0 %}
+          Suppression bloquée ({{ recordings_count }} audio(s) déjà lié(s)) — utilisez « Désactiver ».
+        {% else %}
+          Aucun enregistrement rattaché : suppression définitive autorisée.
+        {% endif %}
+      </small>
+      {% if recordings_count == 0 %}
+      <form action="/prompts/{{ prompt.id }}/delete" method="POST" onsubmit="return confirm('Supprimer définitivement le prompt {{ prompt.prompt_code }} ?');">
+        <button type="submit" class="btn btn-danger btn-sm">Supprimer ce prompt</button>
+      </form>
+      {% endif %}
+    </div>
+    {% endif %}
+  </section>
+
+  <!-- Formulaire d'édition -->
+  <section class="card">
+    <h3>Modifier ce Stimulus</h3>
+    <form action="/prompts/{{ prompt.id }}/edit" method="POST" enctype="multipart/form-data">
+      <div class="form-group">
+        <label for="edit_prompt_type">Type de stimulus</label>
+        <select id="edit_prompt_type" name="prompt_type" class="form-control">
+          {% for val, lbl in [
+            ('image', "Description d'image (ASR spontané — WAXAL)"),
+            ('sentence', 'Phrase à lire (TTS / Script)'),
+            ('question', 'Question ouverte'),
+            ('topic', 'Thématique / Discussion'),
+            ('story', 'Récit / Conte'),
+            ('free_speech', 'Parole libre')
+          ] %}
+          <option value="{{ val }}" {% if prompt.prompt_type == val %}selected{% endif %}>{{ lbl }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="edit_title">Titre du stimulus *</label>
+        <input type="text" id="edit_title" name="title" class="form-control" value="{{ prompt.title }}" required>
+      </div>
+
+      <div class="form-group">
+        <label for="edit_content">Consigne ou phrase en Soussou *</label>
+        <textarea id="edit_content" name="content" class="form-control" rows="3" required>{{ prompt.content }}</textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="edit_description">Traduction / Notes enquêteur (optionnel)</label>
+        <textarea id="edit_description" name="description" class="form-control" rows="2">{{ prompt.description or '' }}</textarea>
+      </div>
+
+      <div class="form-grid" style="margin-bottom: 1rem; align-items: end;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label for="edit_topic">Domaine / Thème</label>
+          <input type="text" id="edit_topic" name="topic" class="form-control" value="{{ prompt.topic or '' }}">
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label for="edit_min_dur">Durée min. (s)</label>
+          <input type="number" step="1" min="1" max="300" id="edit_min_dur" name="min_duration_seconds" class="form-control" value="{{ prompt.min_duration_seconds|int if prompt.min_duration_seconds else 15 }}">
+        </div>
+      </div>
+
+      <div class="form-grid" style="margin-bottom: 1rem; align-items: end;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label for="edit_difficulty">Difficulté</label>
+          <select id="edit_difficulty" name="difficulty" class="form-control">
+            <option value="easy" {% if prompt.difficulty == 'easy' %}selected{% endif %}>Facile</option>
+            <option value="medium" {% if prompt.difficulty == 'medium' %}selected{% endif %}>Moyen</option>
+            <option value="hard" {% if prompt.difficulty == 'hard' %}selected{% endif %}>Difficile</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem 0;">
+            <input type="checkbox" name="active" {% if prompt.active %}checked{% endif %}>
+            <span>Prompt actif (proposé aux locuteurs)</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-grid" style="margin-bottom: 1rem; align-items: end;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label for="edit_license">Licence de l'image</label>
+          <input type="text" id="edit_license" name="media_license" class="form-control" value="{{ prompt.media_license or '' }}" placeholder="ex: CC-BY-4.0, CC0">
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label for="edit_attribution">Attribution / Source</label>
+          <input type="text" id="edit_attribution" name="media_attribution" class="form-control" value="{{ prompt.media_attribution or '' }}" placeholder="Auteur ou source">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="edit_image_file">Remplacer l'image (optionnel — JPEG, PNG ou WebP, max 5 Mo)</label>
+        <input type="file" id="edit_image_file" name="image_file" accept="image/jpeg,image/png,image/webp" class="form-control">
+        <img id="editImagePreview" class="upload-preview" alt="Aperçu de la nouvelle image">
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block">Enregistrer les modifications</button>
+    </form>
+  </section>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  (function () {
+    const fileInput = document.getElementById("edit_image_file");
+    const preview = document.getElementById("editImagePreview");
+    if (fileInput && preview) {
+      fileInput.addEventListener("change", () => {
+        const f = fileInput.files && fileInput.files[0];
+        if (f) {
+          preview.src = URL.createObjectURL(f);
+          preview.style.display = "block";
+        } else {
+          preview.style.display = "none";
+        }
+      });
+    }
+  })();
+</script>
+{% endblock %}

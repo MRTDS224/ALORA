@@ -5,13 +5,14 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.schemas.prompt import PromptCreate, PromptRead
+from app.schemas.prompt import PromptCreate, PromptRead, PromptUpdate
 from app.services import auth as auth_service
 from app.services import prompt as prompt_service
 from app.services.storage import storage_service
 
 router = APIRouter(prefix="/api/prompts", tags=["Prompts"])
 _collector_dep = Depends(auth_service.require_api_roles("collector", "reviewer", "admin"))
+_reviewer_dep = Depends(auth_service.require_api_roles("reviewer", "admin"))
 
 
 class PromptRotationResponse(BaseModel):
@@ -127,3 +128,29 @@ def toggle_prompt(
     if not prompt:
         raise HTTPException(status_code=404, detail="Prompt non trouvé")
     return prompt
+
+
+@router.patch("/{prompt_id}", response_model=PromptRead, dependencies=[_collector_dep])
+def update_prompt_api(
+    prompt_id: UUID,
+    prompt_in: PromptUpdate,
+    db: Session = Depends(get_db),
+):
+    updated = prompt_service.update_prompt(db, prompt_id, prompt_in)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Prompt non trouvé")
+    return updated
+
+
+@router.delete("/{prompt_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[_reviewer_dep])
+def delete_prompt_api(
+    prompt_id: UUID,
+    db: Session = Depends(get_db),
+):
+    try:
+        deleted = prompt_service.delete_prompt(db, prompt_id)
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Prompt non trouvé")
+    return None

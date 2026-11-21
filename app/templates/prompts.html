@@ -98,7 +98,22 @@
 
   <!-- Liste des prompts -->
   <section class="card">
-    <h3>Catalogue de Stimuli ({{ prompts|length }})</h3>
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem;">
+      <h3 style="margin: 0;">Catalogue de Stimuli (<span id="promptVisibleCount">{{ prompts|length }}</span> / {{ prompts|length }})</h3>
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <input type="search" id="promptSearch" class="form-control" placeholder="Rechercher titre, thème, code…" style="width: 220px; padding: 0.4rem 0.65rem;">
+        <select id="promptTypeFilter" class="form-control" style="width: auto; padding: 0.4rem 0.65rem;">
+          <option value="">Tous types</option>
+          <option value="image">Images</option>
+          <option value="sentence">Phrases TTS</option>
+        </select>
+        <select id="promptStatusFilter" class="form-control" style="width: auto; padding: 0.4rem 0.65rem;">
+          <option value="">Tous statuts</option>
+          <option value="active">Actifs</option>
+          <option value="inactive">Inactifs</option>
+        </select>
+      </div>
+    </div>
     <div class="table-container">
       <table>
         <thead>
@@ -108,16 +123,24 @@
             <th>Type &amp; Contenu</th>
             <th>Domaine</th>
             <th>Statut</th>
-            <th>Action</th>
+            <th>Actions</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="promptsTableBody">
           {% for p in prompts %}
-          <tr>
-            <td><strong>{{ p.prompt_code }}</strong></td>
+          <tr
+            data-search="{{ (p.prompt_code ~ ' ' ~ p.title ~ ' ' ~ (p.topic or '') ~ ' ' ~ p.content)|lower }}"
+            data-type="{{ p.prompt_type }}"
+            data-status="{{ 'active' if p.active else 'inactive' }}"
+          >
+            <td>
+              <a href="/prompts/{{ p.id }}" style="font-weight: 700; text-decoration: none; color: var(--primary-600);">{{ p.prompt_code }}</a>
+            </td>
             <td>
               {% if p.media_object_key %}
-                <img src="/api/prompts/{{ p.id }}/media" alt="{{ p.title }}" class="prompt-thumb" loading="lazy">
+                <a href="/prompts/{{ p.id }}" title="Visualiser / modifier {{ p.title }}">
+                  <img src="/api/prompts/{{ p.id }}/media" alt="{{ p.title }}" class="prompt-thumb" loading="lazy">
+                </a>
               {% else %}
                 <span style="color: var(--neutral-600); font-size: 0.8rem;">Texte</span>
               {% endif %}
@@ -128,7 +151,7 @@
                 <span class="badge badge-validating">≥ {{ p.min_duration_seconds|int }}s</span>
               {% endif %}
               <br>
-              <strong>{{ p.title }}</strong><br>
+              <a href="/prompts/{{ p.id }}" style="font-weight: 700; color: var(--neutral-900); text-decoration: none;">{{ p.title }}</a><br>
               <span style="color: var(--neutral-800); font-style: italic;">{{ p.content }}</span>
               {% if p.description %}<br><small style="color: var(--neutral-600);">{{ p.description }}</small>{% endif %}
             </td>
@@ -139,11 +162,14 @@
               </span>
             </td>
             <td>
-              <form action="/prompts/{{ p.id }}/toggle" method="POST">
-                <button type="submit" class="btn btn-secondary btn-sm">
-                  {% if p.active %}Désactiver{% else %}Activer{% endif %}
-                </button>
-              </form>
+              <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+                <a href="/prompts/{{ p.id }}" class="btn btn-primary btn-sm">Voir / Modifier</a>
+                <form action="/prompts/{{ p.id }}/toggle" method="POST" style="display: inline;">
+                  <button type="submit" class="btn btn-secondary btn-sm">
+                    {% if p.active %}Désactiver{% else %}Activer{% endif %}
+                  </button>
+                </form>
+              </div>
             </td>
           </tr>
           {% else %}
@@ -183,6 +209,33 @@
         minDur.value = typeSelect.value === "image" ? "15" : "2";
       });
     }
+
+    const searchInput = document.getElementById("promptSearch");
+    const typeFilter = document.getElementById("promptTypeFilter");
+    const statusFilter = document.getElementById("promptStatusFilter");
+    const tbody = document.getElementById("promptsTableBody");
+    const countEl = document.getElementById("promptVisibleCount");
+
+    function applyPromptFilters() {
+      if (!tbody) return;
+      const q = (searchInput ? searchInput.value : "").trim().toLowerCase();
+      const t = typeFilter ? typeFilter.value : "";
+      const s = statusFilter ? statusFilter.value : "";
+      let visible = 0;
+      tbody.querySelectorAll("tr[data-search]").forEach((row) => {
+        const matchQ = !q || row.getAttribute("data-search").includes(q);
+        const matchT = !t || row.getAttribute("data-type") === t;
+        const matchS = !s || row.getAttribute("data-status") === s;
+        const ok = matchQ && matchT && matchS;
+        row.style.display = ok ? "" : "none";
+        if (ok) visible++;
+      });
+      if (countEl) countEl.textContent = String(visible);
+    }
+
+    if (searchInput) searchInput.addEventListener("input", applyPromptFilters);
+    if (typeFilter) typeFilter.addEventListener("change", applyPromptFilters);
+    if (statusFilter) statusFilter.addEventListener("change", applyPromptFilters);
   })();
 </script>
 {% endblock %}

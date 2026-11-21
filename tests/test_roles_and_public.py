@@ -193,3 +193,70 @@ def test_public_contact_form_and_admin_inbox():
     assert inbox.status_code == 200
     assert "Prof. Linguiste" in inbox.text
     assert "linguiste@universite.gn" in inbox.text
+
+
+def test_prompt_view_edit_and_safe_delete():
+    cred = uuid.uuid4().hex
+    adm_email = f"admin_prm_{uuid.uuid4().hex[:6]}@alora.local"
+    db = SessionLocal()
+    try:
+        auth_service.create_user(db, adm_email, "Admin Prompt Edit", cred, role="admin")
+    finally:
+        db.close()
+
+    adm = TestClient(app)
+    assert adm.post("/login", data={"email": adm_email, "password": cred}, follow_redirects=False).status_code == 303
+
+    # Create a prompt via API
+    create_res = adm.post(
+        "/api/prompts",
+        json={
+            "prompt_type": "image",
+            "title": "Marché initial",
+            "content": "Décrivez ce marché.",
+            "topic": "Marché",
+            "min_duration_seconds": 15.0,
+        },
+    )
+    assert create_res.status_code == 201
+    p_id = create_res.json()["id"]
+
+    # 1. View detail page
+    detail = adm.get(f"/prompts/{p_id}")
+    assert detail.status_code == 200
+    assert "Marché initial" in detail.text
+
+    # 2. Edit via Web form
+    edit_res = adm.post(
+        f"/prompts/{p_id}/edit",
+        data={
+            "title": "Marché de Madina",
+            "content": "Racontez cette scène de marché en soussou.",
+            "prompt_type": "image",
+            "description": "Note terrain Conakry",
+            "topic": "Commerce",
+            "difficulty": "medium",
+            "min_duration_seconds": "20",
+            "media_license": "CC-BY-4.0",
+            "media_attribution": "Équipe ALORA",
+            "active": "on",
+        },
+        follow_redirects=False,
+    )
+    assert edit_res.status_code == 303
+    assert f"/prompts/{p_id}?saved=1" in edit_res.headers["location"]
+
+    # 3. Verify updated fields via API & PATCH
+    fetched = adm.get(f"/api/prompts/{p_id}").json()
+    assert fetched["title"] == "Marché de Madina"
+    assert fetched["topic"] == "Commerce"
+    assert fetched["min_duration_seconds"] == 20.0
+
+    patch_res = adm.patch(f"/api/prompts/{p_id}", json={"difficulty": "hard"})
+    assert patch_res.status_code == 200
+    assert patch_res.json()["difficulty"] == "hard"
+
+    # 4. Safe delete succeeds when 0 recordings are attached
+    del_res = adm.delete(f"/api/prompts/{p_id}")
+    assert del_res.status_code == 204
+    assert adm.get(f"/api/prompts/{p_id}").status_code == 404
