@@ -11,12 +11,12 @@ permissions:
 
 jobs:
   test:
-    name: Pytest & Alembic (PostgreSQL 16 + FFmpeg)
+    name: Pytest & Alembic (PostgreSQL 18 + FFmpeg)
     runs-on: ubuntu-latest
 
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:18-alpine
         env:
           POSTGRES_USER: postgres
           POSTGRES_DB: alora_test
@@ -53,7 +53,7 @@ jobs:
       - name: Install dependencies
         run: uv sync --frozen
 
-      - name: Verify Alembic migrations on clean PostgreSQL 16
+      - name: Verify Alembic migrations on clean PostgreSQL 18
         run: uv run alembic upgrade head
 
       - name: Run automated test suite (isolated DB & local storage)
