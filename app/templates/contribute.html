@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prêter ma voix — ALORA Soussou</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ static_url('css/contribute.css') }}">
+</head>
+<body class="cb">
+  <header class="cb-header">
+    <div class="cb-wrap cb-header-inner">
+      <a href="/" class="cb-logo" aria-label="ALORA, retour à l'accueil">
+        <svg viewBox="0 0 28 28" width="26" height="26" aria-hidden="true">
+          <rect x="2" y="10" width="3.5" height="8" rx="1.75" fill="#f1c27d"/>
+          <rect x="8.5" y="5" width="3.5" height="18" rx="1.75" fill="#ffffff"/>
+          <rect x="15" y="2" width="3.5" height="24" rx="1.75" fill="#e3a33b"/>
+          <rect x="21.5" y="8" width="3.5" height="12" rx="1.75" fill="#e07a52"/>
+        </svg>
+        <span>ALORA</span>
+      </a>
+      <a href="/" class="cb-back">← Accueil</a>
+    </div>
+  </header>
+
+  <main class="cb-wrap cb-main">
+    <!-- Bandeau hors-ligne rassurant -->
+    <div id="cbOfflineBanner" class="cb-banner cb-banner-warn" style="display: none;" role="status" aria-live="polite">
+      <span id="cbOfflineText">Mode hors-ligne : vos voix sont gardées sur ce téléphone.</span>
+      <button type="button" id="cbSyncBtn" class="cb-mini-btn">Envoyer maintenant</button>
+    </div>
+
+    <!-- ============ ÉTAPE 1 : PROFIL ANONYME (30 SECONDES) ============ -->
+    <section id="stepOnboarding" class="cb-card" aria-labelledby="onboardingTitle">
+      <p class="cb-step-pill">Étape 1 sur 2 · Rapide et anonyme</p>
+      <h1 id="onboardingTitle">Prêtez votre voix au soussou</h1>
+      <p class="cb-intro">
+        Quelques choix simples pour aider la recherche. <strong>Votre nom n'est jamais demandé.</strong>
+      </p>
+
+      <form id="onboardingForm">
+        <fieldset class="cb-fieldset">
+          <legend>Vous êtes</legend>
+          <div class="cb-choice-grid cb-choice-2">
+            <label class="cb-choice">
+              <input type="radio" name="gender" value="female" checked>
+              <span>Femme</span>
+            </label>
+            <label class="cb-choice">
+              <input type="radio" name="gender" value="male">
+              <span>Homme</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset class="cb-fieldset">
+          <legend>Votre tranche d'âge</legend>
+          <div class="cb-choice-grid cb-choice-4">
+            <label class="cb-choice">
+              <input type="radio" name="age_group" value="18-25" checked>
+              <span>18–25 ans</span>
+            </label>
+            <label class="cb-choice">
+              <input type="radio" name="age_group" value="26-35">
+              <span>26–35 ans</span>
+            </label>
+            <label class="cb-choice">
+              <input type="radio" name="age_group" value="36-50">
+              <span>36–50 ans</span>
+            </label>
+            <label class="cb-choice">
+              <input type="radio" name="age_group" value="50+">
+              <span>50 ans +</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <div class="cb-field">
+          <label for="cbRegion">Votre région ou ville</label>
+          <select id="cbRegion" name="region" class="cb-select">
+            <option value="Conakry">Conakry</option>
+            <option value="Kindia">Kindia</option>
+            <option value="Boké">Boké</option>
+            <option value="Coyah">Coyah</option>
+            <option value="Dubréka">Dubréka</option>
+            <option value="Forécariah">Forécariah</option>
+            <option value="Boffa">Boffa</option>
+            <option value="Fria">Fria</option>
+            <option value="Télimélé">Télimélé</option>
+            <option value="Autre">Autre région / Diaspora</option>
+          </select>
+        </div>
+
+        <label class="cb-consent">
+          <input type="checkbox" id="cbConsent" checked required>
+          <span>
+            J'accepte que ma voix soit enregistrée <strong>de façon anonyme</strong> pour créer des ressources libres pour la langue soussou.
+          </span>
+        </label>
+
+        <div id="onboardingError" class="cb-msg cb-msg-error" style="display: none;" role="alert"></div>
+
+        <button type="submit" id="btnStartContributing" class="cb-btn cb-btn-gold">
+          Commencer à parler →
+        </button>
+      </form>
+    </section>
+
+    <!-- ============ ÉTAPE 2 : PHOTO + MICRO ULTRA-SIMPLE ============ -->
+    <section id="stepRecord" class="cb-studio" style="display: none;" aria-labelledby="recordInstruction">
+      <div class="cb-progress-bar">
+        <span id="cbCountBadge" class="cb-count-badge">0 photo décrite · Merci !</span>
+        <button type="button" id="btnChangePerson" class="cb-text-btn">Autre personne</button>
+      </div>
+
+      <!-- Carte Photo -->
+      <div class="cb-photo-card">
+        <div class="cb-photo-meta">
+          <span id="cbPhotoTopic" class="cb-topic-pill">Scène du quotidien</span>
+        </div>
+
+        <div id="cbPhotoFrame" class="cb-photo-frame">
+          <img id="cbPhotoImg" alt="Photo à décrire en soussou" loading="eager">
+        </div>
+        <p id="cbPhotoCredit" class="cb-photo-credit"></p>
+
+        <h2 id="recordInstruction" class="cb-instruction">
+          Racontez en soussou ce que vous voyez sur cette photo
+        </h2>
+
+        <ul class="cb-cues" aria-label="Idées pour vous aider">
+          <li>Qui voyez-vous ?</li>
+          <li>Que font-ils ?</li>
+          <li>Où est-ce ?</li>
+        </ul>
+      </div>
+
+      <!-- Zone Micro (1 seule action évidente à la fois) -->
+      <div id="cbRecorderCard" class="cb-recorder-card">
+        <div id="cbTimer" class="cb-timer">00:00</div>
+        <p id="cbHint" class="cb-hint">Essayez de parler environ 15 secondes</p>
+
+        <!-- Jauge simple 0s -> 15s -> 30s -->
+        <div class="cb-gauge" role="progressbar" aria-label="Durée de parole" aria-valuemin="0" aria-valuemax="30" aria-valuenow="0" id="cbGauge">
+          <div class="cb-gauge-ideal" aria-hidden="true"></div>
+          <div class="cb-gauge-fill" id="cbGaugeFill"></div>
+          <span class="cb-gauge-mark" aria-hidden="true"></span>
+        </div>
+        <div class="cb-gauge-labels" aria-hidden="true">
+          <span>0s</span>
+          <span>15s (super)</span>
+          <span>30s</span>
+        </div>
+
+        <div class="cb-vu" aria-hidden="true">
+          <div id="cbVuFill" class="cb-vu-fill"></div>
+        </div>
+
+        <!-- État 1 : Prêt à enregistrer -->
+        <div id="cbStateIdle" class="cb-actions">
+          <button type="button" id="cbBtnRecord" class="cb-btn cb-btn-record">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+              <line x1="12" y1="19" x2="12" y2="22"/>
+            </svg>
+            Appuyer pour parler
+          </button>
+        </div>
+
+        <!-- État 2 : En cours d'enregistrement -->
+        <div id="cbStateRecording" class="cb-actions" style="display: none;">
+          <button type="button" id="cbBtnStop" class="cb-btn cb-btn-stop">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+              <rect x="6" y="6" width="12" height="12" rx="2"/>
+            </svg>
+            Arrêter l'enregistrement
+          </button>
+        </div>
+
+        <!-- État 3 : Réécoute et Envoi -->
+        <div id="cbStateReview" class="cb-review" style="display: none;">
+          <audio id="cbAudioPreview" controls class="cb-audio"></audio>
+          <div id="cbReviewMsg" class="cb-msg" style="display: none;" role="status"></div>
+          <div class="cb-actions-stack">
+            <button type="button" id="cbBtnSend" class="cb-btn cb-btn-send">
+              Envoyer et voir la photo suivante →
+            </button>
+            <button type="button" id="cbBtnRetake" class="cb-btn cb-btn-soft">
+              Recommencer cette photo
+            </button>
+          </div>
+        </div>
+
+        <div id="cbFeedback" class="cb-msg" style="display: none;" role="status" aria-live="polite"></div>
+
+        <button type="button" id="cbBtnSkip" class="cb-skip-link">
+          Passer cette photo →
+        </button>
+      </div>
+    </section>
+
+    <!-- État fin de catalogue -->
+    <section id="stepDone" class="cb-card" style="display: none; text-align: center;">
+      <h2>I nu wali ! Merci infiniment !</h2>
+      <p class="cb-intro">
+        Vous avez décrit toutes les photos disponibles pour le moment. Votre contribution aide directement à préserver et faire rayonner la langue soussou.
+      </p>
+      <a href="/" class="cb-btn cb-btn-gold">Retour à l'accueil</a>
+    </section>
+  </main>
+
+  <script src="{{ static_url('js/offline_queue.js') }}"></script>
+  <script src="{{ static_url('js/contribute.js') }}"></script>
+</body>
+</html>
