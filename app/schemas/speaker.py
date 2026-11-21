@@ -18,6 +18,7 @@ class SpeakerCreate(SpeakerBase):
 class SpeakerRead(SpeakerBase):
     id: UUID
     speaker_code: str
+    consent_audio_object_key: Optional[str] = None
     created_at: datetime.datetime
     updated_at: datetime.datetime
 

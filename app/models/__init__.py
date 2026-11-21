@@ -25,6 +25,7 @@ class Speaker(Base):
     native_language = Column(String(50), nullable=True, default="Susu")
     other_languages = Column(String(255), nullable=True)
     consent_status = Column(String(20), nullable=False, default="granted") # granted, pending, revoked
+    consent_audio_object_key = Column(String(500), nullable=True) # Optional oral consent recording in MinIO
     created_at = Column(DateTime(timezone=True), default=now_utc, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=now_utc, onupdate=now_utc, nullable=False)
 
@@ -40,6 +41,7 @@ class Session(Base):
     recorded_at = Column(DateTime(timezone=True), default=now_utc, nullable=False)
     location = Column(String(100), nullable=True)
     environment = Column(String(100), nullable=True) # e.g. indoor, quiet_room, outdoor
+    target_task = Column(String(20), nullable=False, default="asr") # asr (field/spontaneous) or tts (studio/scripted)
     device = Column(String(100), nullable=True)      # e.g. browser_mic, smartphone
     collector = Column(String(100), nullable=True)
     notes = Column(Text, nullable=True)
@@ -58,6 +60,9 @@ class Prompt(Base):
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     content = Column(Text, nullable=False)
+    media_object_key = Column(String(500), nullable=True) # Image key in MinIO for visual elicitation
+    media_content_type = Column(String(100), nullable=True)
+    min_duration_seconds = Column(Float, nullable=True) # Recommended minimum duration (e.g., 15.0s for ASR images)
     language = Column(String(20), nullable=False, default="sus") # Susu
     topic = Column(String(100), nullable=True)
     difficulty = Column(String(20), nullable=True)
@@ -80,6 +85,11 @@ class Recording(Base):
     channels = Column(Integer, nullable=True)
     format = Column(String(20), nullable=True, default="wav")
     file_size_bytes = Column(BigInteger, nullable=True)
+    snr_db = Column(Float, nullable=True)
+    peak_amplitude = Column(Float, nullable=True)
+    clipping_detected = Column(Boolean, default=False, nullable=False)
+    speech_ratio = Column(Float, nullable=True)
+    auto_quality_flags = Column(String(255), nullable=True) # comma-separated: too_short,low_snr,clipping,silence_only
     recording_status = Column(String(50), nullable=False, default="uploaded", index=True)
     # Status workflow: uploaded, validating, validated, transcribed, reviewed, accepted, rejected
 

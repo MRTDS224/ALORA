@@ -21,6 +21,11 @@ class RecordingRead(RecordingBase):
     recording_code: str
     audio_object_key: str
     file_size_bytes: Optional[int] = None
+    snr_db: Optional[float] = None
+    peak_amplitude: Optional[float] = None
+    clipping_detected: bool = False
+    speech_ratio: Optional[float] = None
+    auto_quality_flags: Optional[str] = None
     recording_status: str
     created_at: datetime.datetime
     updated_at: datetime.datetime

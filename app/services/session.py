@@ -16,6 +16,7 @@ def create_session(db: Session, session_in: SessionCreate) -> SessionModel:
         speaker_id=session_in.speaker_id,
         location=session_in.location,
         environment=session_in.environment,
+        target_task=session_in.target_task or "asr",
         device=session_in.device,
         collector=session_in.collector,
         notes=session_in.notes
