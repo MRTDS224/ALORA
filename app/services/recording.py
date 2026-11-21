@@ -1,4 +1,6 @@
+import os
 import subprocess
+import tempfile
 from typing import List, Optional
 from uuid import UUID
 from sqlalchemy.orm import Session
@@ -15,15 +17,20 @@ def generate_recording_code(db: Session) -> str:
 
 def normalize_audio_ffmpeg(audio_bytes: bytes) -> bytes:
     """
-    Normalizes input audio bytes to 16kHz, mono 16-bit PCM WAV using FFmpeg.
-    Returns converted bytes or original bytes if conversion fails.
+    Normalizes input audio bytes to a standards-compliant 16kHz, mono, 16-bit PCM WAV
+    using FFmpeg with a seekable temp output so RIFF/data chunk sizes are always exact.
     """
     if not audio_bytes:
         return audio_bytes
+    tmp_path = None
     try:
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+            tmp_path = tmp.name
+
         process = subprocess.Popen(
             [
                 "ffmpeg",
+                "-y",
                 "-hide_banner",
                 "-loglevel",
                 "error",
@@ -37,17 +44,26 @@ def normalize_audio_ffmpeg(audio_bytes: bytes) -> bytes:
                 "pcm_s16le",
                 "-f",
                 "wav",
-                "pipe:1",
+                tmp_path,
             ],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
-        out, err = process.communicate(input=audio_bytes)
-        if process.returncode == 0 and out and len(out) >= 44:
-            return out
+        process.communicate(input=audio_bytes)
+        if process.returncode == 0 and os.path.exists(tmp_path):
+            with open(tmp_path, "rb") as f:
+                out = f.read()
+            if len(out) >= 44:
+                return out
     except Exception as e:
         print(f"[FFmpeg] Normalization warning: {e}")
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
     return audio_bytes
 
 

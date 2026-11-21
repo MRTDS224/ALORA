@@ -75,6 +75,10 @@ def analyze_wav_bytes(
                 return metrics
 
             raw = wf.readframes(nframes)
+            actual_frames = len(raw) // (channels * sampwidth)
+            if actual_frames == 0:
+                return metrics
+            metrics.duration_seconds = round(actual_frames / float(framerate), 3)
     except Exception:
         return metrics
 
@@ -123,6 +127,7 @@ def analyze_wav_bytes(
         sum_sq = sum((v / 32768.0) ** 2 for v in chunk)
         frame_rms_list.append(math.sqrt(sum_sq / len(chunk)))
 
+    speech_level = 0.0
     if frame_rms_list:
         sorted_rms = sorted(frame_rms_list)
         noise_floor = max(_percentile(sorted_rms, 0.15), 1e-5)
@@ -130,7 +135,7 @@ def analyze_wav_bytes(
         raw_snr = 20.0 * math.log10(speech_level / noise_floor)
         snr_db = round(max(0.0, min(60.0, raw_snr)), 1)
 
-        activity_threshold = max(0.015, noise_floor * 2.5)
+        activity_threshold = max(0.015, noise_floor * 1.4)
         active_frames = sum(1 for r in frame_rms_list if r >= activity_threshold)
         speech_ratio = round(active_frames / float(len(frame_rms_list)), 3)
 
@@ -140,7 +145,9 @@ def analyze_wav_bytes(
     # Contextual quality flags (non-blocking warnings for field collectors & reviewers)
     flags: List[str] = []
 
-    is_silent = (peak_amp < 0.01) or (metrics.speech_ratio is not None and metrics.speech_ratio < 0.08)
+    is_silent = (peak_amp < 0.015) or (speech_level < 0.01) or (
+        metrics.speech_ratio is not None and metrics.speech_ratio < 0.05 and (metrics.snr_db or 0.0) < 3.0
+    )
     if is_silent:
         flags.append("silence_only")
 
