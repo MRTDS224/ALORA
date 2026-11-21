@@ -81,3 +81,18 @@ def check_rate_limit(key: str, max_requests: int = 60, window_seconds: int = 360
         return False
     bucket.append(now)
     return True
+
+
+def is_secure_cookie(request) -> bool:
+    """Enable Secure cookie attribute in production or behind HTTPS proxies (Render, Cloudflare)."""
+    if settings.is_production:
+        return True
+    forwarded_proto = (request.headers.get("x-forwarded-proto") or "").split(",")[0].strip().lower()
+    return forwarded_proto == "https" or getattr(request.url, "scheme", "") == "https"
+
+
+def get_client_ip(request) -> str:
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"

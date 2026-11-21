@@ -36,9 +36,10 @@ uv run python scripts/seed_prompts.py
 uv run uvicorn app.main:app --reload --port 8000
 ```
 
-Compte administrateur par défaut en local (configurable dans `.env`) :
-- **Email :** `admin@alora.local`
-- **Mot de passe :** `alora-admin-2026`
+Pour créer votre compte administrateur local, renseignez `ADMIN_EMAIL` et `ADMIN_PASSWORD` dans votre fichier `.env` local (jamais commité), ou exécutez :
+```bash
+uv run python scripts/create_admin.py --email admin@alora.local --password "<votre-mot-de-passe>" --role admin
+```
 
 ---
 

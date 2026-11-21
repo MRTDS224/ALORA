@@ -6,8 +6,19 @@ from app.models import Segment, WordAnnotation, Recording, Transcription
 from app.schemas.segment import SegmentCreate, WordAnnotationCreate
 
 def generate_segment_code(db: Session) -> str:
-    count = db.query(func.count(Segment.id)).scalar() or 0
-    return f"SEG_{count + 1:06d}"
+    last = (
+        db.query(Segment.segment_code)
+        .filter(Segment.segment_code.like("SEG_%"))
+        .order_by(Segment.segment_code.desc())
+        .first()
+    )
+    next_num = 1
+    if last and last[0]:
+        try:
+            next_num = int(str(last[0]).split("_", 1)[1]) + 1
+        except (ValueError, IndexError):
+            next_num = (db.query(func.count(Segment.id)).scalar() or 0) + 1
+    return f"SEG_{next_num:06d}"
 
 def create_segment(db: Session, segment_in: SegmentCreate) -> Segment:
     code = generate_segment_code(db)

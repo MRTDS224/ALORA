@@ -17,8 +17,19 @@ MAX_IMAGE_BYTES = 5 * 1024 * 1024  # 5 MB
 
 
 def generate_prompt_code(db: Session) -> str:
-    count = db.query(func.count(Prompt.id)).scalar() or 0
-    return f"PRM_{count + 1:06d}"
+    last = (
+        db.query(Prompt.prompt_code)
+        .filter(Prompt.prompt_code.like("PRM_%"))
+        .order_by(Prompt.prompt_code.desc())
+        .first()
+    )
+    next_num = 1
+    if last and last[0]:
+        try:
+            next_num = int(str(last[0]).split("_", 1)[1]) + 1
+        except (ValueError, IndexError):
+            next_num = (db.query(func.count(Prompt.id)).scalar() or 0) + 1
+    return f"PRM_{next_num:06d}"
 
 
 def create_prompt(

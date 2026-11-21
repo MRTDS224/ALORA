@@ -130,21 +130,22 @@ def test_speaker_disjoint_small_corpus_stays_in_train():
 def test_e2e_waxal_image_elicitation_rotation_consent_and_export():
     """End-to-end API test covering image prompts, rotation, oral consent, QA metrics, and validated export."""
     from fastapi.testclient import TestClient
-    from app.core.config import settings
     from app.core.database import SessionLocal
     from app.main import app
-    from app.services.auth import ensure_default_admin
+    from app.services import auth as auth_service
 
+    email = f"waxal_admin_{uuid.uuid4().hex[:6]}@alora.local"
+    cred = uuid.uuid4().hex
     db = SessionLocal()
     try:
-        ensure_default_admin(db)
+        auth_service.create_user(db, email, "WAXAL E2E Admin", cred, role="admin")
     finally:
         db.close()
 
     client = TestClient(app)
     login_res = client.post(
         "/login",
-        data={"email": settings.ADMIN_EMAIL, "password": settings.ADMIN_PASSWORD},
+        data={"email": email, "password": cred},
         follow_redirects=False,
     )
     assert login_res.status_code == 303

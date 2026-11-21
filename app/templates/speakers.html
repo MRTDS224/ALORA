@@ -172,10 +172,18 @@
         blob = null;
         preview.style.display = "none";
         btnSave.disabled = true;
-        msg.innerHTML = "";
+        msg.textContent = "";
         dialog.showModal();
       });
     });
+
+    function setConsentMsg(kind, text) {
+      msg.textContent = "";
+      const box = document.createElement("div");
+      box.className = `alert alert-${kind}`;
+      box.textContent = text;
+      msg.appendChild(box);
+    }
 
     btnClose.addEventListener("click", () => {
       if (rec && rec.state !== "inactive") rec.stop();
@@ -194,15 +202,15 @@
           preview.src = URL.createObjectURL(blob);
           preview.style.display = "block";
           btnSave.disabled = false;
-          msg.innerHTML = `<div class="alert alert-success">Audio capturé. Cliquez sur Sauvegarder.</div>`;
+          setConsentMsg("success", "Audio capturé. Cliquez sur Sauvegarder.");
         };
         rec.start();
         btnStart.disabled = true;
         btnStop.disabled = false;
         btnSave.disabled = true;
-        msg.innerHTML = `<div class="alert alert-info">Enregistrement du consentement en cours…</div>`;
+        setConsentMsg("info", "Enregistrement du consentement en cours…");
       } catch (err) {
-        msg.innerHTML = `<div class="alert alert-danger">Accès micro refusé : ${err.message}</div>`;
+        setConsentMsg("danger", `Accès micro refusé : ${err.message}`);
       }
     });
 
@@ -225,7 +233,7 @@
         window.location.reload();
       } catch (err) {
         btnSave.disabled = false;
-        msg.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+        setConsentMsg("danger", err.message || "Erreur inattendue");
       }
     });
   })();

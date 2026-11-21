@@ -29,10 +29,12 @@ def _make_clean_wav(duration_sec: float = 3.0) -> bytes:
 
 
 def test_password_hashing_and_signed_tokens():
-    h = hash_password("secret-susu-2026")
+    sample_input = uuid.uuid4().hex
+    other_input = uuid.uuid4().hex
+    h = hash_password(sample_input)
     assert h.startswith("scrypt$")
-    assert verify_password("secret-susu-2026", h) is True
-    assert verify_password("wrong-password", h) is False
+    assert verify_password(sample_input, h) is True
+    assert verify_password(other_input, h) is False
 
     token = sign_token({"uid": "abc", "role": "collector"})
     decoded = verify_token(token)
@@ -42,19 +44,24 @@ def test_password_hashing_and_signed_tokens():
 
 
 def test_rbac_access_matrix():
+    ephemeral_cred = uuid.uuid4().hex
     db = SessionLocal()
     try:
-        auth_service.ensure_default_admin(db)
         col_email = f"collector_{uuid.uuid4().hex[:6]}@alora.local"
         rev_email = f"reviewer_{uuid.uuid4().hex[:6]}@alora.local"
-        auth_service.create_user(db, col_email, "Enquêteur Test", "pass1234", role="collector")
-        auth_service.create_user(db, rev_email, "Réviseur Test", "pass1234", role="reviewer")
+        adm_email = f"admin_{uuid.uuid4().hex[:6]}@alora.local"
+        auth_service.create_user(db, col_email, "Enquêteur Test", ephemeral_cred, role="collector")
+        auth_service.create_user(db, rev_email, "Réviseur Test", ephemeral_cred, role="reviewer")
+        auth_service.create_user(db, adm_email, "Admin Test", ephemeral_cred, role="admin")
     finally:
         db.close()
 
     # 1. Anonymous user: public routes allowed, staff routes redirect or 401
     anon = TestClient(app)
-    assert anon.get("/").status_code == 200
+    home_res = anon.get("/")
+    assert home_res.status_code == 200
+    assert home_res.headers.get("x-content-type-options") == "nosniff"
+    assert home_res.headers.get("x-frame-options") == "DENY"
     assert anon.get("/contribuer").status_code == 200
     assert anon.get("/login").status_code == 200
     assert anon.get("/dashboard", follow_redirects=False).status_code == 303
@@ -66,7 +73,7 @@ def test_rbac_access_matrix():
 
     # 2. Collector: can access /record, /speakers, /sessions, /prompts, NOT /dashboard or /admin/users or export
     col = TestClient(app)
-    assert col.post("/login", data={"email": col_email, "password": "pass1234"}, follow_redirects=False).status_code == 303
+    assert col.post("/login", data={"email": col_email, "password": ephemeral_cred}, follow_redirects=False).status_code == 303
     assert col.get("/record").status_code == 200
     assert col.get("/prompts").status_code == 200
     assert col.get("/speakers").status_code == 200
@@ -77,7 +84,7 @@ def test_rbac_access_matrix():
 
     # 3. Reviewer: can access /dashboard, /recordings, /transcriptions, NOT /admin/users or export
     rev = TestClient(app)
-    assert rev.post("/login", data={"email": rev_email, "password": "pass1234"}, follow_redirects=False).status_code == 303
+    assert rev.post("/login", data={"email": rev_email, "password": ephemeral_cred}, follow_redirects=False).status_code == 303
     assert rev.get("/dashboard").status_code == 200
     assert rev.get("/recordings").status_code == 200
     assert rev.get("/transcriptions").status_code == 200
@@ -88,7 +95,7 @@ def test_rbac_access_matrix():
     adm = TestClient(app)
     assert adm.post(
         "/login",
-        data={"email": settings.ADMIN_EMAIL, "password": settings.ADMIN_PASSWORD},
+        data={"email": adm_email, "password": ephemeral_cred},
         follow_redirects=False,
     ).status_code == 303
     assert adm.get("/dashboard").status_code == 200
@@ -168,10 +175,18 @@ def test_public_contact_form_and_admin_inbox():
     assert res.json()["status"] == "ok"
 
     # Admin can view messages on /admin/messages
+    ephemeral_cred = uuid.uuid4().hex
+    adm_email = f"admin_inbox_{uuid.uuid4().hex[:6]}@alora.local"
+    db = SessionLocal()
+    try:
+        auth_service.create_user(db, adm_email, "Admin Inbox Test", ephemeral_cred, role="admin")
+    finally:
+        db.close()
+
     adm = TestClient(app)
     adm.post(
         "/login",
-        data={"email": settings.ADMIN_EMAIL, "password": settings.ADMIN_PASSWORD},
+        data={"email": adm_email, "password": ephemeral_cred},
         follow_redirects=False,
     )
     inbox = adm.get("/admin/messages")

@@ -6,8 +6,19 @@ from app.models import Session as SessionModel
 from app.schemas.session import SessionCreate
 
 def generate_session_code(db: Session) -> str:
-    count = db.query(func.count(SessionModel.id)).scalar() or 0
-    return f"SES_{count + 1:06d}"
+    last = (
+        db.query(SessionModel.session_code)
+        .filter(SessionModel.session_code.like("SES_%"))
+        .order_by(SessionModel.session_code.desc())
+        .first()
+    )
+    next_num = 1
+    if last and last[0]:
+        try:
+            next_num = int(str(last[0]).split("_", 1)[1]) + 1
+        except (ValueError, IndexError):
+            next_num = (db.query(func.count(SessionModel.id)).scalar() or 0) + 1
+    return f"SES_{next_num:06d}"
 
 def create_session(db: Session, session_in: SessionCreate) -> SessionModel:
     code = session_in.session_code or generate_session_code(db)

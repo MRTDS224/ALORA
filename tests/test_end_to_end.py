@@ -1,22 +1,24 @@
+import uuid
 import pytest
 from fastapi.testclient import TestClient
-from app.core.config import settings
 from app.main import app
 from app.core.database import SessionLocal
-from app.services.auth import ensure_default_admin
+from app.services import auth as auth_service
 from app.services.storage import storage_service
 
 
 def _admin_client() -> TestClient:
+    email = f"e2e_admin_{uuid.uuid4().hex[:6]}@alora.local"
+    cred = uuid.uuid4().hex
     db = SessionLocal()
     try:
-        ensure_default_admin(db)
+        auth_service.create_user(db, email, "E2E Admin", cred, role="admin")
     finally:
         db.close()
     c = TestClient(app)
     res = c.post(
         "/login",
-        data={"email": settings.ADMIN_EMAIL, "password": settings.ADMIN_PASSWORD},
+        data={"email": email, "password": cred},
         follow_redirects=False,
     )
     assert res.status_code == 303

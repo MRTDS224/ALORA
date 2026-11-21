@@ -88,7 +88,7 @@ def update_user_role(db: Session, user_id: UUID, new_role: str) -> Optional[User
     return user
 
 
-def ensure_default_admin(db: Session) -> User:
+def ensure_default_admin(db: Session) -> Optional[User]:
     """Idempotently bootstrap the initial admin account from settings if no admin exists."""
     existing_admin = db.query(User).filter(User.role == "admin").first()
     if existing_admin:
@@ -101,6 +101,13 @@ def ensure_default_admin(db: Session) -> User:
         db.commit()
         db.refresh(existing_by_email)
         return existing_by_email
+
+    if not settings.ADMIN_PASSWORD or not settings.ADMIN_PASSWORD.strip():
+        print(
+            "[ALORA Auth Warning] No admin user exists and ADMIN_PASSWORD is not set. "
+            "Set ADMIN_PASSWORD in environment or run scripts/create_admin.py."
+        )
+        return None
 
     return create_user(
         db=db,

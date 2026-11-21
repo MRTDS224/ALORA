@@ -15,6 +15,7 @@ from app.core.database import get_db
 from app.core.security import (
     CONTRIBUTOR_COOKIE_NAME,
     check_rate_limit,
+    is_secure_cookie,
     sign_token,
     verify_token,
 )
@@ -133,6 +134,7 @@ def public_onboarding(
         key=CONTRIBUTOR_COOKIE_NAME,
         value=token,
         httponly=True,
+        secure=is_secure_cookie(request),
         samesite="lax",
         max_age=60 * 60 * 24 * 30,
     )

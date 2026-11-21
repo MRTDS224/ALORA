@@ -11,7 +11,13 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.security import SESSION_COOKIE_NAME, sign_token
+from app.core.security import (
+    SESSION_COOKIE_NAME,
+    check_rate_limit,
+    get_client_ip,
+    is_secure_cookie,
+    sign_token,
+)
 from app.models import User
 from app.schemas.prompt import PromptCreate
 from app.schemas.session import SessionCreate
@@ -81,6 +87,19 @@ def handle_login(
     next: str = Form("/dashboard"),
     db: Session = Depends(get_db),
 ):
+    if not check_rate_limit(f"login:{get_client_ip(request)}", max_requests=20, window_seconds=900):
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context={
+                "next_url": next,
+                "error": "Trop de tentatives de connexion. Réessayez dans quelques minutes.",
+                "email": email,
+                "current_user": None,
+            },
+            status_code=429,
+        )
+
     user = auth_service.authenticate_user(db, email=email, password=password)
     if not user:
         return templates.TemplateResponse(
@@ -105,6 +124,7 @@ def handle_login(
         key=SESSION_COOKIE_NAME,
         value=token,
         httponly=True,
+        secure=is_secure_cookie(request),
         samesite="lax",
         max_age=settings.SESSION_MAX_AGE_SECONDS,
     )

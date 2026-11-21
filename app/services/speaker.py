@@ -6,8 +6,19 @@ from app.models import Speaker
 from app.schemas.speaker import SpeakerCreate
 
 def generate_speaker_code(db: Session) -> str:
-    count = db.query(func.count(Speaker.id)).scalar() or 0
-    return f"SPK_{count + 1:06d}"
+    last = (
+        db.query(Speaker.speaker_code)
+        .filter(Speaker.speaker_code.like("SPK_%"))
+        .order_by(Speaker.speaker_code.desc())
+        .first()
+    )
+    next_num = 1
+    if last and last[0]:
+        try:
+            next_num = int(str(last[0]).split("_", 1)[1]) + 1
+        except (ValueError, IndexError):
+            next_num = (db.query(func.count(Speaker.id)).scalar() or 0) + 1
+    return f"SPK_{next_num:06d}"
 
 def create_speaker(db: Session, speaker_in: SpeakerCreate) -> Speaker:
     code = speaker_in.speaker_code or generate_speaker_code(db)

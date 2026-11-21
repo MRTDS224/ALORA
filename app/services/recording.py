@@ -11,8 +11,19 @@ from app.services.storage import storage_service
 
 
 def generate_recording_code(db: Session) -> str:
-    count = db.query(func.count(Recording.id)).scalar() or 0
-    return f"REC_{count + 1:06d}"
+    last = (
+        db.query(Recording.recording_code)
+        .filter(Recording.recording_code.like("REC_%"))
+        .order_by(Recording.recording_code.desc())
+        .first()
+    )
+    next_num = 1
+    if last and last[0]:
+        try:
+            next_num = int(str(last[0]).split("_", 1)[1]) + 1
+        except (ValueError, IndexError):
+            next_num = (db.query(func.count(Recording.id)).scalar() or 0) + 1
+    return f"REC_{next_num:06d}"
 
 
 def normalize_audio_ffmpeg(audio_bytes: bytes) -> bytes:
