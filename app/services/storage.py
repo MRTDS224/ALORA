@@ -43,6 +43,12 @@ class StorageService:
         day = now.strftime("%d")
         return f"{prefix}/{year}/{month}/{day}/{recording_code}.{file_extension.lstrip('.')}"
 
+    def generate_prompt_media_key(self, prompt_code: str, file_extension: str = "jpg") -> str:
+        return f"prompts/images/{prompt_code}.{file_extension.lstrip('.')}"
+
+    def generate_consent_audio_key(self, speaker_code: str, file_extension: str = "wav") -> str:
+        return f"consents/{speaker_code}_consent.{file_extension.lstrip('.')}"
+
     def upload_file(
         self,
         file_bytes: bytes,
