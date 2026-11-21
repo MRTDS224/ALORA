@@ -193,3 +193,15 @@ class WordAnnotation(Base):
 
     recording = relationship("Recording", back_populates="word_annotations")
     transcription = relationship("Transcription", back_populates="word_annotations")
+
+
+class ContactMessage(Base):
+    __tablename__ = "contact_messages"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=generate_uuid)
+    sender_name = Column(String(150), nullable=False)
+    sender_contact = Column(String(255), nullable=False)  # Email or WhatsApp/phone
+    profile_type = Column(String(60), nullable=False, default="autre")
+    message = Column(Text, nullable=False)
+    is_read = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=now_utc, nullable=False)

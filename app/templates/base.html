@@ -60,6 +60,7 @@
             {% if current_user.role in ['reviewer', 'admin'] %}
             <li><a href="/recordings" class="{% if '/recordings' in request.url.path %}active{% endif %}">Validation</a></li>
             <li><a href="/transcriptions" class="{% if '/transcriptions' in request.url.path %}active{% endif %}">Transcription</a></li>
+            <li><a href="/admin/messages" class="{% if '/admin/messages' in request.url.path %}active{% endif %}">Messages</a></li>
             {% endif %}
             {% if current_user.role == 'admin' %}
             <li><a href="/admin/users" class="{% if '/admin/users' in request.url.path %}active{% endif %}">Équipe</a></li>

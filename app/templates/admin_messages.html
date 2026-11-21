@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Messages reçus — ALORA{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Messages de Contact ({{ messages|length }})</h1>
+    <p class="subtitle">Messages envoyés depuis le formulaire de la page d'accueil · {{ unread_count }} non lu(s).</p>
+  </div>
+</div>
+
+<section class="card">
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Expéditeur &amp; Contact</th>
+          <th>Profil</th>
+          <th>Message</th>
+          <th>Statut</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in messages %}
+        <tr style="{% if not m.is_read %}background: #fffbeb;{% endif %}">
+          <td style="white-space: nowrap;">{{ m.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+          <td>
+            <strong>{{ m.sender_name }}</strong><br>
+            <small style="color: var(--primary);">{{ m.sender_contact }}</small>
+          </td>
+          <td><span class="badge badge-uploaded">{{ m.profile_type }}</span></td>
+          <td style="max-width: 420px; white-space: pre-wrap;">{{ m.message }}</td>
+          <td>
+            <form action="/admin/messages/{{ m.id }}/toggle-read" method="POST">
+              <button type="submit" class="btn btn-sm {% if m.is_read %}btn-secondary{% else %}btn-primary{% endif %}">
+                {% if m.is_read %}Lu ✓{% else %}Marquer lu{% endif %}
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5" style="text-align: center; color: var(--neutral-600);">Aucun message reçu pour le moment.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

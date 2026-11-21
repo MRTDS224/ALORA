@@ -174,6 +174,39 @@ def handle_toggle_user(
     return RedirectResponse(url="/admin/users", status_code=303)
 
 
+# --- ADMIN CONTACT MESSAGES (REVIEWER & ADMIN) ---
+@web_router.get("/admin/messages", response_class=HTMLResponse)
+def page_admin_messages(
+    request: Request,
+    current_user: User = Depends(auth_service.require_web_roles(*REVIEWER_ROLES)),
+    db: Session = Depends(get_db),
+):
+    from app.models import ContactMessage
+
+    messages = db.query(ContactMessage).order_by(ContactMessage.created_at.desc()).limit(200).all()
+    unread_count = sum(1 for m in messages if not m.is_read)
+    return templates.TemplateResponse(
+        request=request,
+        name="admin_messages.html",
+        context={"messages": messages, "unread_count": unread_count, "current_user": current_user},
+    )
+
+
+@web_router.post("/admin/messages/{message_id}/toggle-read")
+def handle_toggle_message_read(
+    message_id: str,
+    current_user: User = Depends(auth_service.require_web_roles(*REVIEWER_ROLES)),
+    db: Session = Depends(get_db),
+):
+    from app.models import ContactMessage
+
+    entry = db.query(ContactMessage).filter(ContactMessage.id == UUID(message_id)).first()
+    if entry:
+        entry.is_read = not entry.is_read
+        db.commit()
+    return RedirectResponse(url="/admin/messages", status_code=303)
+
+
 # --- DASHBOARD (REVIEWER & ADMIN) ---
 @web_router.get("/dashboard", response_class=HTMLResponse)
 def page_dashboard(

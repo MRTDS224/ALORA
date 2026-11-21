@@ -18,6 +18,7 @@ from app.core.security import (
     sign_token,
     verify_token,
 )
+from app.models import ContactMessage
 from app.schemas.prompt import PromptRead
 from app.schemas.session import SessionCreate
 from app.schemas.speaker import SpeakerCreate
@@ -239,3 +240,43 @@ async def public_upload_recording(
         "auto_quality_flags": rec.auto_quality_flags,
         "completed_count": total_for_session,
     }
+
+
+class PublicContactRequest(BaseModel):
+    sender_name: str
+    sender_contact: str
+    profile_type: str = "chercheur"
+    message: str
+    website: Optional[str] = None  # Honeypot anti-bot field (must stay empty)
+
+
+@router.post("/contact", status_code=status.HTTP_201_CREATED)
+def public_contact_submit(
+    body: PublicContactRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    if not check_rate_limit(f"contact:{_client_ip(request)}", max_requests=10, window_seconds=3600):
+        raise HTTPException(status_code=429, detail="Trop de messages envoyés. Veuillez réessayer plus tard.")
+
+    # Silent accept for bots filling hidden honeypot
+    if body.website and body.website.strip():
+        return {"status": "ok", "message": "Merci pour votre message !"}
+
+    name = body.sender_name.strip()
+    contact = body.sender_contact.strip()
+    msg = body.message.strip()
+    if len(name) < 2 or len(contact) < 4 or len(msg) < 5:
+        raise HTTPException(status_code=400, detail="Merci de renseigner votre nom, un moyen de contact et votre message.")
+
+    entry = ContactMessage(
+        sender_name=name[:150],
+        sender_contact=contact[:255],
+        profile_type=(body.profile_type or "autre")[:60],
+        message=msg[:4000],
+        is_read=False,
+    )
+    db.add(entry)
+    db.commit()
+    db.refresh(entry)
+    return {"status": "ok", "id": str(entry.id), "message": "Merci ! Votre message a bien été transmis."}

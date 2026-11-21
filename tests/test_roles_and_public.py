@@ -151,3 +151,30 @@ def test_public_voluntary_contributor_flow():
     # Step 5: Reset profile ("Autre personne")
     assert pub.post("/api/public/reset-profile").status_code == 200
     assert pub.get("/api/public/me").json()["has_profile"] is False
+
+
+def test_public_contact_form_and_admin_inbox():
+    pub = TestClient(app)
+    res = pub.post(
+        "/api/public/contact",
+        json={
+            "sender_name": "Prof. Linguiste",
+            "sender_contact": "linguiste@universite.gn",
+            "profile_type": "chercheur",
+            "message": "Bonjour, intéressé par le corpus soussou.",
+        },
+    )
+    assert res.status_code == 201
+    assert res.json()["status"] == "ok"
+
+    # Admin can view messages on /admin/messages
+    adm = TestClient(app)
+    adm.post(
+        "/login",
+        data={"email": settings.ADMIN_EMAIL, "password": settings.ADMIN_PASSWORD},
+        follow_redirects=False,
+    )
+    inbox = adm.get("/admin/messages")
+    assert inbox.status_code == 200
+    assert "Prof. Linguiste" in inbox.text
+    assert "linguiste@universite.gn" in inbox.text
