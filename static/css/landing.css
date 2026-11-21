@@ -1075,7 +1075,19 @@ html {
 .lp-copy {
   padding-block-start: 1.5rem;
   font-size: 0.84rem;
-  color: #7c879a;
+  color: #94a3b8;
+  line-height: 1.6;
+}
+
+.lp-copy a {
+  color: var(--ochre);
+  text-decoration: none;
+}
+
+.lp-copy a:hover { text-decoration: underline; }
+
+.lp-copy img {
+  filter: invert(0.85);
 }
 
 /* ---------- Responsive ---------- */

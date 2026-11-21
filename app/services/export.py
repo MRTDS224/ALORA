@@ -285,6 +285,7 @@ def export_corpus_zip(
             "exported_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "license": "CC-BY-4.0",
             "license_url": "https://creativecommons.org/licenses/by/4.0/",
+            "license_notice": "ALORA © 2026 by Diallo Mamadou Tahirou is licensed under CC BY 4.0. To view a copy of this license, visit https://creativecommons.org/licenses/by/4.0/",
             "filters": {
                 "include_unvalidated": include_unvalidated,
                 "included_statuses": "all" if include_unvalidated else sorted(VALIDATED_EXPORT_STATUSES),
@@ -318,8 +319,7 @@ def export_corpus_zip(
 This archive contains the exported **Soussou / Susu (`sus`)** oral speech corpus produced by the **ALORA** platform (*Automatic Learning for Oral Resource-poor African Languages*), structured for Speech Recognition (ASR), Text-to-Speech (TTS), and computational linguistics research.
 
 ## License
-This dataset is released under the **Creative Commons Attribution 4.0 International (CC-BY-4.0)** license:
-https://creativecommons.org/licenses/by/4.0/
+ALORA © 2026 by Diallo Mamadou Tahirou is licensed under CC BY 4.0. To view a copy of this license, visit https://creativecommons.org/licenses/by/4.0/
 
 You are free to share and adapt the material for any purpose, provided you give appropriate credit to the ALORA project and its contributors.
 

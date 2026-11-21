@@ -56,8 +56,13 @@ ALORA/
 ├── tests/                   # Suite pytest (E2E, pipeline WAXAL, RBAC & parcours public)
 ├── docker-compose.yml       # PostgreSQL 16 (5434) & MinIO (9000/9001)
 ├── pyproject.toml           # Dépendances et métadonnées gérées par uv
+├── ARCHITECTURE.md          # Schémas UML, flux, carte « Où modifier quoi ? » & pièges connus
+├── CONTRIBUTING.md          # Guide pratique pour les contributeurs (code, linguistique, voix)
+├── CHANGELOG.md             # Journal des versions
 └── LICENSE                  # Licence MIT (code source)
 ```
+
+> 📘 **Pour comprendre le code rapidement :** consultez **[ARCHITECTURE.md](ARCHITECTURE.md)** (schémas UML Mermaid, flux complets et table « Où modifier quoi ? ») et **[CONTRIBUTING.md](CONTRIBUTING.md)**.
 
 ---
 
@@ -147,8 +152,9 @@ La suite valide l'intégralité du système (14 tests) : cycle de vie complet, n
 ## 📜 Licences & Crédits
 
 - **Code source de la plateforme :** Licence **MIT** (voir [LICENSE](LICENSE)).
-- **Corpus oral exporté :** Publié sous licence **Creative Commons Attribution 4.0 International (CC-BY-4.0)**.
+- **Corpus oral, prompts & documentation :**  
+  <a href="https://github.com/MRTDS224/ALORA">ALORA</a> © 2026 by <a href="https://www.linkedin.com/in/mamadou-tahirou-diallo-27361032b/">Diallo Mamadou Tahirou</a> is licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a><img src="https://mirrors.creativecommons.org/presskit/icons/cc.svg" alt="" style="max-width: 1em;max-height:1em;margin-left: .2em;"><img src="https://mirrors.creativecommons.org/presskit/icons/by.svg" alt="" style="max-width: 1em;max-height:1em;margin-left: .2em;">
 - **Images de base (`seed_data/prompts_catalog.csv`) :** Issues de Wikimedia Commons sous licences ouvertes (`CC0`, `CC-BY`, `CC-BY-SA`) avec attribution conservée pour chaque image.
 
-**Initié par :** Mamadou Tahirou Diallo — Élève-Ingénieur Data Science & Machine Learning, **INPT Rabat** ([LinkedIn](https://linkedin.com/in/mamadou-tahirou-diallo-27361032b) · [GitHub](https://github.com/MRTDS224) · `mrtdsow@outlook.com`)  
+**Initié par :** Diallo Mamadou Tahirou — Élève-Ingénieur Data Science & Machine Learning, **INPT Rabat** ([LinkedIn](https://www.linkedin.com/in/mamadou-tahirou-diallo-27361032b/) · [GitHub](https://github.com/MRTDS224) · `mrtdsow@outlook.com`)  
 **Encadrement scientifique :** Prof. Ibn Elhaj Hassan — Enseignant-Chercheur, **INPT Rabat**
