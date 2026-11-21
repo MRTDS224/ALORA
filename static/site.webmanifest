@@ -1,0 +1,22 @@
+{
+  "name": "ALORA — Corpus Vocal Soussou",
+  "short_name": "ALORA",
+  "description": "Plateforme open-source de collecte vocale pour les langues africaines peu dotées (Soussou, Guinée).",
+  "start_url": "/contribuer",
+  "display": "standalone",
+  "background_color": "#0f1a2b",
+  "theme_color": "#0f1a2b",
+  "icons": [
+    {
+      "src": "/static/img/alora-icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/img/alora-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

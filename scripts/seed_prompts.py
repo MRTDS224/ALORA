@@ -8,8 +8,9 @@ Usage:
 """
 
 import csv
+import time
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 import httpx
 
@@ -22,6 +23,26 @@ from app.services.storage import storage_service
 HEADERS = {
     "User-Agent": "ALORA-Research-Corpus/0.4 (https://github.com/MRTDS224/ALORA; research corpus)"
 }
+
+
+def _download_image(client: httpx.Client, url: str, title: str) -> Optional[bytes]:
+    """Download an image with gentle pacing and retry/backoff on Wikimedia 429/5xx."""
+    for attempt in range(3):
+        try:
+            r = client.get(url, timeout=25.0)
+            if r.status_code in (429, 500, 502, 503, 504):
+                wait_s = 2.0 * (attempt + 1)
+                time.sleep(wait_s)
+                continue
+            r.raise_for_status()
+            time.sleep(0.15)
+            return r.content
+        except Exception as exc:
+            if attempt == 2:
+                print(f"[WARN] Could not download {title}: {exc}")
+            else:
+                time.sleep(1.5 * (attempt + 1))
+    return None
 
 STARTER_TTS_SENTENCES: List[Dict[str, str]] = [
     {
@@ -121,13 +142,9 @@ def seed_all(seed_dir: Path = Path("seed_data")) -> None:
                                 if img_path.is_file():
                                     restore_bytes = img_path.read_bytes()
                                 elif row.get("thumb_url"):
-                                    try:
-                                        r = client.get(row["thumb_url"], timeout=25.0)
-                                        r.raise_for_status()
-                                        restore_bytes = r.content
+                                    restore_bytes = _download_image(client, row["thumb_url"], title)
+                                    if restore_bytes:
                                         img_path.write_bytes(restore_bytes)
-                                    except Exception as exc:
-                                        print(f"[WARN] Could not restore {title}: {exc}")
                                 if restore_bytes:
                                     storage_service.upload_file(
                                         file_bytes=restore_bytes,
@@ -142,14 +159,9 @@ def seed_all(seed_dir: Path = Path("seed_data")) -> None:
                         if img_path.is_file():
                             img_bytes = img_path.read_bytes()
                         elif row.get("thumb_url"):
-                            try:
-                                r = client.get(row["thumb_url"], timeout=25.0)
-                                r.raise_for_status()
-                                img_bytes = r.content
+                            img_bytes = _download_image(client, row["thumb_url"], title)
+                            if img_bytes:
                                 img_path.write_bytes(img_bytes)
-                            except Exception as exc:
-                                print(f"[WARN] Could not re-download {title}: {exc}")
-                                continue
 
                         if not img_bytes:
                             continue

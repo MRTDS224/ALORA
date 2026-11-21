@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="static/img/alora-logo.png" alt="ALORA — Automatic Learning for Oral Resource-poor African Languages" width="440">
+</p>
+
 # 🌍 ALORA — Automatic Learning for Oral Resource-poor African Languages
 
 **ALORA** est une plateforme scientifique open-source et modulaire dédiée à la collecte collaborative, à la validation acoustique, à la transcription versionnée et à l'exportation de corpus oraux pour les langues africaines peu dotées — inaugurée sur la langue **Soussou (`sus`)** parlée en Guinée.

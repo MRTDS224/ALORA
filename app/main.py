@@ -66,6 +66,11 @@ app.include_router(api_export_router)
 app.include_router(web_router)
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return RedirectResponse(url="/static/img/alora-icon.png", status_code=302)
+
+
 @app.get("/health")
 def health_check():
     return {
