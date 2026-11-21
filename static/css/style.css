@@ -521,6 +521,36 @@ textarea.form-control {
   min-height: 96px;
 }
 
+/* Password visibility toggle */
+.password-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-wrap .form-control {
+  padding-right: 5.5rem;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 0.35rem;
+  min-height: 36px;
+  padding: 0.25rem 0.65rem;
+  border: 1px solid var(--neutral-200);
+  border-radius: 6px;
+  background: var(--neutral-50);
+  color: var(--neutral-800);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.password-toggle:hover {
+  background: var(--neutral-100);
+}
+
 /* Alerts & Banners */
 .alert {
   padding: 0.9rem 1.1rem;

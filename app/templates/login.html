@@ -33,14 +33,25 @@
 
       <div class="form-group">
         <label for="password">Mot de passe</label>
-        <input
-          type="password"
-          id="password"
-          name="password"
-          class="form-control"
-          autocomplete="current-password"
-          required
-        >
+        <div class="password-wrap">
+          <input
+            type="password"
+            id="password"
+            name="password"
+            class="form-control"
+            autocomplete="current-password"
+            required
+          >
+          <button
+            type="button"
+            class="password-toggle"
+            data-toggle-password="password"
+            aria-pressed="false"
+            aria-label="Afficher le mot de passe"
+          >
+            Afficher
+          </button>
+        </div>
       </div>
 
       <button type="submit" class="btn btn-primary btn-block">Se connecter</button>
