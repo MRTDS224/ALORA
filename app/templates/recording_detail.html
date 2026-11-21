@@ -1,86 +1,115 @@
 {% extends "base.html" %}
 
-{% block title %}Détails & Validation {{ recording.recording_code }} — ALORA{% endblock %}
+{% block title %}Validation {{ recording.recording_code }} — ALORA{% endblock %}
 
 {% block content %}
 <div class="page-header">
   <div>
-    <h2 class="page-title">Enregistrement {{ recording.recording_code }}</h2>
-    <p class="subtitle">Évaluation de la qualité audio & statut dans le pipeline</p>
+    <h1 class="page-title">Enregistrement {{ recording.recording_code }}</h1>
+    <p class="subtitle">Diagnostic acoustique automatique &amp; validation humaine</p>
   </div>
-  <a href="/recordings" class="btn btn-secondary">← Retour à la liste</a>
+  <div class="page-actions">
+    <a href="/recordings" class="btn btn-secondary">← Retour à la liste</a>
+    <a href="/transcriptions/{{ recording.id }}" class="btn btn-primary">Transcrire</a>
+  </div>
 </div>
 
 <div class="form-grid">
-  <!-- Fiche Métadonnées & Player -->
-  <div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-      <h3>Informations Audio</h3>
-      <span class="badge badge-{{ recording.recording_status }}" style="font-size: 0.9rem;">
+  <!-- Fiche Audio, Stimulus & QA Automatique -->
+  <section class="card">
+    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+      <h3 style="margin-bottom: 0;">Informations &amp; Qualité Auto</h3>
+      <span class="badge badge-{{ recording.recording_status }}">
         Statut : {{ recording.recording_status }}
       </span>
     </div>
 
-    <!-- Lecteur Audio Stream MinIO -->
-    <div style="background: var(--neutral-100); padding: 1.5rem; border-radius: 8px; text-align: center; margin-bottom: 1.5rem;">
+    <div style="background: var(--neutral-50); border: 1px solid var(--neutral-200); padding: 1.15rem; border-radius: var(--radius-sm); margin-bottom: 1.25rem;">
       <audio src="/api/recordings/{{ recording.id }}/stream" controls style="width: 100%; margin-bottom: 0.5rem;"></audio>
-      <div style="font-size: 0.85rem; color: var(--neutral-600);">
-        Clé MinIO S3 : <code>{{ recording.audio_object_key }}</code>
+      <div style="font-size: 0.82rem; color: var(--neutral-600);">
+        Clé MinIO : <code>{{ recording.audio_object_key }}</code>
       </div>
     </div>
 
-    <table style="width: 100%; border: none;">
-      <tr>
-        <td><strong>Locuteur :</strong></td>
-        <td>{{ recording.session.speaker.speaker_code if recording.session and recording.session.speaker else '-' }}</td>
-      </tr>
-      <tr>
-        <td><strong>Session :</strong></td>
-        <td>{{ recording.session.session_code if recording.session else '-' }} ({{ recording.session.environment }})</td>
-      </tr>
-      <tr>
-        <td><strong>Prompt :</strong></td>
-        <td>
-          {% if recording.prompt %}
-            <strong>{{ recording.prompt.title }}</strong><br>
-            <em>« {{ recording.prompt.content }} »</em>
-          {% else %}
-            Parole libre
-          {% endif %}
-        </td>
-      </tr>
-      <tr>
-        <td><strong>Durée :</strong></td>
-        <td>{{ recording.duration_seconds|round(2) if recording.duration_seconds else '-' }} secondes</td>
-      </tr>
-      <tr>
-        <td><strong>Format & Taille :</strong></td>
-        <td>{{ recording.format|upper }} • {{ (recording.file_size_bytes / 1024)|round(1) if recording.file_size_bytes else '-' }} KB</td>
-      </tr>
-      <tr>
-        <td><strong>Échantillonnage :</strong></td>
-        <td>{{ recording.sample_rate or '16000' }} Hz, {{ recording.channels or '1' }} canal(x)</td>
-      </tr>
-    </table>
-
-    <div style="margin-top: 1.5rem;">
-      <a href="/transcriptions/{{ recording.id }}" class="btn btn-primary" style="width: 100%; text-align: center;">
-        ✍️ Accéder à la Transcription de cet Audio
-      </a>
+    <!-- Métriques acoustiques automatiques -->
+    <div class="qa-metrics-grid">
+      <div class="qa-metric-box">
+        <span>Durée réelle</span>
+        <strong>{{ recording.duration_seconds|round(2) if recording.duration_seconds else '-' }} s</strong>
+      </div>
+      <div class="qa-metric-box">
+        <span>SNR estimé</span>
+        <strong>{{ recording.snr_db|round(1) if recording.snr_db is not none else '-' }} dB</strong>
+      </div>
+      <div class="qa-metric-box">
+        <span>Activité vocale</span>
+        <strong>{{ (recording.speech_ratio * 100)|round(0)|int if recording.speech_ratio is not none else '-' }} %</strong>
+      </div>
+      <div class="qa-metric-box">
+        <span>Saturation</span>
+        <strong>{{ 'Oui' if recording.clipping_detected else 'Non' }}</strong>
+      </div>
     </div>
-  </div>
 
-  <!-- Formulaire d'Évaluation de Qualité -->
-  <div class="card">
-    <h3 style="margin-bottom: 1rem;">Formulaire de Validation Qualité</h3>
+    {% if recording.auto_quality_flags %}
+    <div class="alert alert-warning" style="margin-top: 0.75rem;">
+      <strong>Alertes automatiques :</strong> {{ recording.auto_quality_flags }}
+    </div>
+    {% endif %}
+
+    {% if recording.prompt and recording.prompt.media_object_key %}
+    <div class="studio-image-frame" style="margin-top: 1rem;">
+      <img src="/api/prompts/{{ recording.prompt.id }}/media" alt="{{ recording.prompt.title }}">
+    </div>
+    {% endif %}
+
+    <div class="table-container" style="margin-top: 1rem;">
+      <table>
+        <tbody>
+          <tr>
+            <td><strong>Locuteur</strong></td>
+            <td>{{ recording.session.speaker.speaker_code if recording.session and recording.session.speaker else '-' }}</td>
+          </tr>
+          <tr>
+            <td><strong>Session &amp; Mode</strong></td>
+            <td>
+              {{ recording.session.session_code if recording.session else '-' }}
+              {% if recording.session %}
+                <span class="badge badge-{{ recording.session.target_task or 'asr' }}">{{ (recording.session.target_task or 'asr')|upper }}</span>
+              {% endif %}
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Stimulus</strong></td>
+            <td>
+              {% if recording.prompt %}
+                <strong>{{ recording.prompt.title }}</strong><br>
+                <em>{{ recording.prompt.content }}</em>
+              {% else %}
+                Parole libre
+              {% endif %}
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Format</strong></td>
+            <td>{{ (recording.format or 'wav')|upper }} · {{ recording.sample_rate or '16000' }} Hz · {{ recording.channels or '1' }} canal</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Formulaire d'Évaluation Humaine -->
+  <section class="card">
+    <h3>Validation Qualité Humaine</h3>
 
     <form action="/recordings/{{ recording.id }}/evaluate" method="POST">
       <div class="form-group">
         <label for="audio_quality">Qualité acoustique globale</label>
         <select id="audio_quality" name="audio_quality" class="form-control">
-          <option value="good" {% if last_quality and last_quality.audio_quality == 'good' %}selected{% endif %}>Basse distorsion (Good)</option>
+          <option value="good" {% if last_quality and last_quality.audio_quality == 'good' %}selected{% endif %}>Bonne (Good)</option>
           <option value="fair" {% if last_quality and last_quality.audio_quality == 'fair' %}selected{% endif %}>Moyenne (Fair)</option>
-          <option value="poor" {% if last_quality and last_quality.audio_quality == 'poor' %}selected{% endif %}>Inaudible / Mauvaise (Poor)</option>
+          <option value="poor" {% if last_quality and last_quality.audio_quality == 'poor' %}selected{% endif %}>Mauvaise / Inaudible (Poor)</option>
         </select>
       </div>
 
@@ -93,59 +122,48 @@
         </select>
       </div>
 
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-        <div>
-          <label style="font-weight: 500;">
-            <input type="checkbox" name="speech_present" value="true" {% if not last_quality or last_quality.speech_present %}checked{% endif %}>
-            Parole intelligible présente
-          </label>
-        </div>
-        <div>
-          <label style="font-weight: 500;">
-            <input type="checkbox" name="clipping" value="true" {% if last_quality and last_quality.clipping %}checked{% endif %}>
-            Saturation / Saturation (Clipping)
-          </label>
-        </div>
-        <div>
-          <label style="font-weight: 500;">
-            <input type="checkbox" name="multiple_speakers" value="true" {% if last_quality and last_quality.multiple_speakers %}checked{% endif %}>
-            Locuteurs multiples en parallèle
-          </label>
-        </div>
+      <div class="form-group" style="display: flex; flex-direction: column; gap: 0.6rem;">
+        <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 500;">
+          <input type="checkbox" name="speech_present" value="true" {% if not last_quality or last_quality.speech_present %}checked{% endif %}>
+          Parole intelligible présente
+        </label>
+        <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 500;">
+          <input type="checkbox" name="clipping" value="true" {% if (last_quality and last_quality.clipping) or recording.clipping_detected %}checked{% endif %}>
+          Saturation (Clipping)
+        </label>
+        <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 500;">
+          <input type="checkbox" name="multiple_speakers" value="true" {% if last_quality and last_quality.multiple_speakers %}checked{% endif %}>
+          Locuteurs multiples
+        </label>
       </div>
 
       <div class="form-group">
-        <label for="reviewer">Évaluateur / Validateur</label>
+        <label for="reviewer">Évaluateur</label>
         <input type="text" id="reviewer" name="reviewer" class="form-control" placeholder="Nom du réviseur" value="{{ last_quality.reviewer if last_quality else '' }}">
       </div>
 
       <div class="form-group">
-        <label for="notes">Notes & Commentaires sur la qualité</label>
-        <textarea id="notes" name="notes" class="form-control" placeholder="Bruit de coq, vent dans le micro, hésitation du locuteur...">{{ last_quality.notes if last_quality else '' }}</textarea>
+        <label for="notes">Notes &amp; Observations</label>
+        <textarea id="notes" name="notes" class="form-control" placeholder="Vent, bruit de fond, hésitation...">{{ last_quality.notes if last_quality else '' }}</textarea>
       </div>
 
-      <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
-        <button type="submit" name="action" value="validate" class="btn btn-success" style="flex: 1;">
-          ✅ Valider l'Enregistrement
-        </button>
-        <button type="submit" name="action" value="reject" class="btn btn-danger" style="flex: 1;">
-          ❌ Rejeter l'Enregistrement
-        </button>
+      <div class="studio-controls" style="max-width: none; margin-bottom: 0;">
+        <button type="submit" name="action" value="validate" class="btn btn-success">Valider</button>
+        <button type="submit" name="action" value="reject" class="btn btn-danger">Rejeter</button>
       </div>
     </form>
 
-    <!-- Historique des évaluations -->
     {% if quality_history %}
-    <div style="margin-top: 2rem; border-top: 1px solid var(--neutral-200); padding-top: 1rem;">
-      <h4 style="margin-bottom: 0.5rem; font-size: 0.95rem;">Historique des évalutions :</h4>
+    <div style="margin-top: 1.5rem; border-top: 1px solid var(--neutral-200); padding-top: 1rem;">
+      <h4 style="margin-bottom: 0.6rem; font-size: 0.92rem;">Historique des évaluations</h4>
       {% for q in quality_history %}
-      <div style="font-size: 0.85rem; background: var(--neutral-100); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem;">
-        <strong>Qualité: {{ q.audio_quality }}</strong> | Bruit: {{ q.noise_level }} | Par: {{ q.reviewer or 'Anonyme' }} ({{ q.created_at.strftime('%d/%m/%Y %H:%M') }})
-        {% if q.notes %}<br><em>Notes: {{ q.notes }}</em>{% endif %}
+      <div style="font-size: 0.84rem; background: var(--neutral-50); border: 1px solid var(--neutral-200); padding: 0.6rem 0.75rem; border-radius: 6px; margin-bottom: 0.5rem;">
+        <strong>{{ q.audio_quality }}</strong> · Bruit : {{ q.noise_level }} · {{ q.reviewer or 'Anonyme' }} ({{ q.created_at.strftime('%d/%m/%Y %H:%M') }})
+        {% if q.notes %}<br><em>{{ q.notes }}</em>{% endif %}
       </div>
       {% endfor %}
     </div>
     {% endif %}
-  </div>
+  </section>
 </div>
 {% endblock %}

@@ -5,10 +5,12 @@
 {% block content %}
 <div class="page-header">
   <div>
-    <h2 class="page-title">Validation des Enregistrements Audio</h2>
-    <p class="subtitle">Évaluation de la qualité acoustique, écoute et contrôle avant transcription.</p>
+    <h1 class="page-title">Validation des Enregistrements Audio</h1>
+    <p class="subtitle">Évaluation de la qualité acoustique, diagnostic automatique et contrôle avant transcription.</p>
   </div>
-  <a href="/record" class="btn btn-primary">🎙️ Nouvel Enregistrement</a>
+  <div class="page-actions">
+    <a href="/record" class="btn btn-primary">Nouvel Enregistrement</a>
+  </div>
 </div>
 
 <div class="card">
@@ -36,7 +38,7 @@
           <th>Code</th>
           <th>Locuteur & Session</th>
           <th>Prompt / Contenu</th>
-          <th>Durée</th>
+          <th>Durée &amp; QA Auto</th>
           <th>Lecteur Audio</th>
           <th>Statut</th>
           <th>Actions</th>
@@ -62,7 +64,14 @@
               <span style="color: var(--neutral-600);">Parole libre</span>
             {% endif %}
           </td>
-          <td>{{ rec.duration_seconds|round(1) if rec.duration_seconds else '-' }}s</td>
+          <td>
+            {{ rec.duration_seconds|round(1) if rec.duration_seconds else '-' }}s
+            {% if rec.auto_quality_flags %}
+              <br><span class="badge badge-warn">{{ rec.auto_quality_flags }}</span>
+            {% elif rec.snr_db is not none %}
+              <br><small style="color: var(--success); font-weight: 600;">SNR {{ rec.snr_db }} dB</small>
+            {% endif %}
+          </td>
           <td>
             <audio src="/api/recordings/{{ rec.id }}/stream" controls preload="metadata" style="height: 32px; max-width: 180px;"></audio>
           </td>

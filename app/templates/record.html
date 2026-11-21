@@ -1,107 +1,139 @@
 {% extends "base.html" %}
 
-{% block title %}Collecte Audio (Record) — ALORA{% endblock %}
+{% block title %}Studio de Collecte Terrain — ALORA{% endblock %}
 
 {% block content %}
 <div class="page-header">
   <div>
-    <h2 class="page-title">🎙️ Collecte de la Parole Susu</h2>
-    <p class="subtitle">Session de production orale • Capture directe navigateur -> MinIO S3 -> PostgreSQL</p>
+    <h1 class="page-title">Studio de Collecte Soussou</h1>
+    <p class="subtitle">Élicitation par images (ASR) et scripts (TTS) · Optimisé mobile &amp; résilient hors-ligne.</p>
+  </div>
+  <div class="page-actions">
+    <a href="/sessions" class="btn btn-secondary">Gérer les sessions</a>
+    <a href="/prompts" class="btn btn-secondary">Catalogue de stimuli</a>
   </div>
 </div>
 
-<div class="form-grid">
-  <!-- Sélection Session et Prompt -->
-  <div class="card">
-    <h3 style="margin-bottom: 1rem;">1. Contexte de Collecte</h3>
-    
+<!-- Bandeau d'état terrain -->
+<div class="studio-topbar">
+  <div class="studio-topbar-meta">
+    <span id="networkPill" class="network-pill">En ligne</span>
+    <span id="sessionTaskBadge" class="badge badge-asr">Mode ASR · Terrain</span>
+  </div>
+  <span id="sessionProgressLabel" style="font-size: 0.85rem; color: #cbd5e1;">Sélectionnez une session pour activer la rotation</span>
+</div>
+
+<!-- File d'attente hors-ligne IndexedDB -->
+<div id="offlineQueueBar" class="offline-queue-bar" role="status" aria-live="polite">
+  <strong id="offlineCountText">0 audio(s) en attente</strong>
+  <button type="button" id="btnSyncOffline" class="btn btn-primary btn-sm">Synchroniser maintenant</button>
+</div>
+
+<div class="layout-split">
+  <!-- Colonne 1 : Sélection Session & Stimulus -->
+  <section class="card" aria-label="Paramètres de collecte">
+    <h3>1. Contexte de Collecte</h3>
+
     <div class="form-group">
-      <label for="session_id">Session d'Enregistrement *</label>
-      <select id="session_id" name="session_id" class="form-control" onchange="updateContextInfo()">
-        <option value="">-- Sélectionner une Session --</option>
+      <label for="session_id">Session d'enregistrement *</label>
+      <select id="session_id" name="session_id" class="form-control">
+        <option value="">-- Sélectionner une session --</option>
         {% for sess in sessions %}
-        <option value="{{ sess.id }}" {% if selected_session_id == sess.id|string %}selected{% endif %}>
-          {{ sess.session_code }} — Locuteur {{ sess.speaker.speaker_code if sess.speaker else 'Inconnu' }} ({{ sess.environment or 'normal' }})
+        <option
+          value="{{ sess.id }}"
+          data-task="{{ sess.target_task or 'asr' }}"
+          {% if selected_session_id == sess.id|string %}selected{% endif %}
+        >
+          {{ sess.session_code }} — {{ sess.speaker.speaker_code if sess.speaker else 'Inconnu' }} [{{ (sess.target_task or 'asr')|upper }}]
         </option>
         {% endfor %}
       </select>
     </div>
 
     <div class="form-group">
-      <label for="prompt_id">Prompt / Stimulus (Optionnel pour parole libre)</label>
-      <select id="prompt_id" name="prompt_id" class="form-control" onchange="onPromptChange()">
-        <option value="">-- Parole Spontanée / Libre (Aucun prompt) --</option>
+      <label for="prompt_id">Stimulus (Image ou Texte)</label>
+      <select id="prompt_id" name="prompt_id" class="form-control">
+        <option value="">-- Parole spontanée libre --</option>
         {% for p in prompts %}
-        <option value="{{ p.id }}" data-content="{{ p.content }}" data-title="{{ p.title }}" data-desc="{{ p.description or '' }}" data-type="{{ p.prompt_type }}" {% if selected_prompt_id == p.id|string %}selected{% endif %}>
+        <option
+          value="{{ p.id }}"
+          data-content="{{ p.content }}"
+          data-title="{{ p.title }}"
+          data-desc="{{ p.description or '' }}"
+          data-type="{{ p.prompt_type }}"
+          data-topic="{{ p.topic or '' }}"
+          data-min-duration="{{ p.min_duration_seconds or '' }}"
+          data-media-url="{% if p.media_object_key %}/api/prompts/{{ p.id }}/media{% endif %}"
+          {% if selected_prompt_id == p.id|string %}selected{% endif %}
+        >
           [{{ p.prompt_code }}] {{ p.title }} ({{ p.prompt_type }})
         </option>
         {% endfor %}
       </select>
+      <p class="form-hint">La rotation automatique évite de remontrer un stimulus déjà enregistré par ce locuteur.</p>
     </div>
 
-    <!-- Affichage du Prompt Sélectionné -->
-    <div id="promptBox" style="background: var(--primary-light); border: 1px solid var(--neutral-300); border-radius: 8px; padding: 1.25rem; margin-top: 1.5rem; display: none;">
-      <span id="promptBadge" class="badge badge-uploaded" style="margin-bottom: 0.5rem;">Sentence</span>
-      <h4 id="promptTitle" style="color: var(--primary); margin-bottom: 0.5rem;">Titre du prompt</h4>
-      <p id="promptContent" style="font-size: 1.25rem; font-weight: 700; color: var(--neutral-900); font-style: italic; margin-bottom: 0.5rem;">
-        Content text in Susu
-      </p>
-      <p id="promptDesc" style="color: var(--neutral-600); font-size: 0.9rem;"></p>
-    </div>
-  </div>
+    <button type="button" id="btnNextPrompt" class="btn btn-accent btn-block">
+      Stimulus suivant (Rotation WAXAL) →
+    </button>
+  </section>
 
-  <!-- Studio Enregistreur Browser -->
-  <div class="card" style="grid-column: span 2;">
-    <h3 style="margin-bottom: 1rem;">2. Studio d'Enregistrement</h3>
+  <!-- Colonne 2 : Affichage du Stimulus + Enregistreur -->
+  <div>
+    <!-- Carte Stimulus (Image plein cadre ou Script Soussou) -->
+    <section id="promptBox" class="studio-prompt-card" style="display: none;" aria-label="Stimulus actif">
+      <div class="studio-prompt-header">
+        <span id="promptBadge" class="badge badge-uploaded">Stimulus</span>
+        <span id="promptTopic" class="badge badge-asr" style="display: none;"></span>
+      </div>
 
-    <div class="recorder-box">
-      <div class="recording-timer" id="timerDisplay">00:00</div>
-      
-      <div style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 1.5rem;">
-        <button type="button" id="btnRecord" class="btn btn-danger" style="font-size: 1.1rem; padding: 0.75rem 1.5rem;">
-          🔴 Enregistrer
+      <div id="promptImageWrap" class="studio-image-frame" style="display: none;">
+        <img id="promptImage" alt="Image à décrire en soussou" loading="eager">
+      </div>
+
+      <h3 id="promptTitle" style="margin-bottom: 0.35rem;"></h3>
+      <p id="promptContent" class="studio-prompt-text"></p>
+      <p id="promptDesc" class="subtitle" style="display: none;"></p>
+    </section>
+
+    <!-- Studio d'enregistrement tactile -->
+    <section id="recorderBox" class="recorder-box" aria-label="Enregistreur audio">
+      <div class="recording-timer" id="timerDisplay" aria-live="off">00:00</div>
+      <p class="duration-goal" id="durationGoal">Durée recommandée : au moins 15s</p>
+
+      <div class="vu-meter" aria-hidden="true">
+        <div id="vuMeterFill" class="vu-meter-fill"></div>
+      </div>
+
+      <div class="studio-controls">
+        <button type="button" id="btnRecord" class="btn btn-danger">
+          Enregistrer
         </button>
-        <button type="button" id="btnStop" class="btn btn-secondary" style="font-size: 1.1rem; padding: 0.75rem 1.5rem;" disabled>
-          ⏹️ Arrêter
+        <button type="button" id="btnStop" class="btn btn-secondary" disabled>
+          Arrêter
         </button>
       </div>
 
-      <div style="max-width: 400px; margin: 0 auto 1.5rem auto;">
-        <audio id="audioPreview" controls style="width: 100%; display: none;"></audio>
+      <div id="audioPreviewWrap" class="studio-audio-preview" style="display: none;">
+        <audio id="audioPreview" controls></audio>
       </div>
 
-      <button type="button" id="btnUpload" class="btn btn-primary" style="font-size: 1rem; padding: 0.75rem 2rem;" disabled>
-        📤 Envoyer la donnée (MinIO + PostgreSQL)
-      </button>
+      <div class="studio-controls" style="margin-bottom: 0;">
+        <button type="button" id="btnUpload" class="btn btn-primary" disabled>
+          Envoyer la prise
+        </button>
+        <button type="button" id="btnRetake" class="btn btn-secondary" style="display: none;">
+          Recommencer
+        </button>
+      </div>
 
-      <div id="statusMsg" style="margin-top: 1.5rem; font-size: 0.95rem;"></div>
-    </div>
+      <div id="statusMsg" style="margin-top: 1.25rem;" aria-live="polite"></div>
+    </section>
   </div>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
+<script src="/static/js/offline_queue.js"></script>
 <script src="/static/js/recorder.js"></script>
-<script>
-  function onPromptChange() {
-    const select = document.getElementById("prompt_id");
-    const selectedOption = select.options[select.selectedIndex];
-    const box = document.getElementById("promptBox");
-
-    if (select.value) {
-      document.getElementById("promptTitle").textContent = selectedOption.getAttribute("data-title");
-      document.getElementById("promptContent").textContent = "« " + selectedOption.getAttribute("data-content") + " »";
-      document.getElementById("promptDesc").textContent = selectedOption.getAttribute("data-desc") ? "Traduction : " + selectedOption.getAttribute("data-desc") : "";
-      document.getElementById("promptBadge").textContent = selectedOption.getAttribute("data-type");
-      box.style.display = "block";
-    } else {
-      box.style.display = "none";
-    }
-  }
-
-  // Trigger on load
-  document.addEventListener("DOMContentLoaded", () => {
-    onPromptChange();
-  });
-</script>
 {% endblock %}

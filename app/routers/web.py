@@ -1,7 +1,7 @@
 import datetime
 from typing import Optional
 from uuid import UUID
-from fastapi import APIRouter, Depends, Request, Form, Response
+from fastapi import APIRouter, Depends, Request, Form, Response, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -84,6 +84,7 @@ def handle_create_session(
     session_code: Optional[str] = Form(None),
     location: Optional[str] = Form(None),
     environment: str = Form("quiet_room"),
+    target_task: str = Form("asr"),
     device: str = Form("browser_mic"),
     collector: Optional[str] = Form(None),
     notes: Optional[str] = Form(None),
@@ -94,6 +95,7 @@ def handle_create_session(
         session_code=session_code if session_code else None,
         location=location,
         environment=environment,
+        target_task=target_task if target_task in {"asr", "tts"} else "asr",
         device=device,
         collector=collector,
         notes=notes
@@ -109,15 +111,24 @@ def page_prompts(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse(request=request, name="prompts.html", context={"prompts": prompts})
 
 @web_router.post("/prompts")
-def handle_create_prompt(
+async def handle_create_prompt(
     title: str = Form(...),
     content: str = Form(...),
-    prompt_type: str = Form("sentence"),
+    prompt_type: str = Form("image"),
     description: Optional[str] = Form(None),
     topic: Optional[str] = Form(None),
     difficulty: str = Form("easy"),
+    min_duration_seconds: Optional[str] = Form(None),
+    image_file: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db)
 ):
+    parsed_min_dur: Optional[float] = None
+    if min_duration_seconds and min_duration_seconds.strip():
+        try:
+            parsed_min_dur = float(min_duration_seconds.strip())
+        except ValueError:
+            parsed_min_dur = None
+
     prompt_in = PromptCreate(
         title=title,
         content=content,
@@ -125,9 +136,24 @@ def handle_create_prompt(
         description=description,
         topic=topic,
         difficulty=difficulty,
+        min_duration_seconds=parsed_min_dur,
         active=True
     )
-    prompt_service.create_prompt(db, prompt_in)
+    created = prompt_service.create_prompt(db, prompt_in)
+
+    if image_file and image_file.filename:
+        image_bytes = await image_file.read()
+        if image_bytes:
+            try:
+                prompt_service.attach_prompt_media(
+                    db=db,
+                    prompt_id=created.id,
+                    image_bytes=image_bytes,
+                    content_type=image_file.content_type or "image/jpeg",
+                )
+            except ValueError as e:
+                print(f"[Prompt Media Upload Warning] {e}")
+
     return RedirectResponse(url="/prompts", status_code=303)
 
 @web_router.post("/prompts/{prompt_id}/toggle")

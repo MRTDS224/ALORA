@@ -5,15 +5,15 @@
 {% block content %}
 <div class="page-header">
   <div>
-    <h2 class="page-title">Sessions d'Enregistrement</h2>
-    <p class="subtitle">Séances de collecte associées aux locuteurs et conditions environnementales.</p>
+    <h1 class="page-title">Sessions d'Enregistrement</h1>
+    <p class="subtitle">Séances de collecte ASR (terrain, parole spontanée) et TTS (studio, scripts équilibrés).</p>
   </div>
 </div>
 
-<div class="form-grid">
-  <!-- Formulaire de création de session -->
-  <div class="card">
-    <h3 style="margin-bottom: 1rem;">Nouvelle Session</h3>
+<div class="layout-split">
+  <!-- Formulaire de création -->
+  <section class="card">
+    <h3>Nouvelle Session</h3>
     <form action="/sessions" method="POST">
       <div class="form-group">
         <label for="speaker_id">Locuteur *</label>
@@ -26,14 +26,15 @@
           {% endfor %}
         </select>
       </div>
+
       <div class="form-group">
-        <label for="session_code">Code Session (Optionnel, auto-généré)</label>
-        <input type="text" id="session_code" name="session_code" class="form-control" placeholder="ex: SES_000001">
+        <label for="target_task">Protocole / Objectif (WAXAL) *</label>
+        <select id="target_task" name="target_task" class="form-control">
+          <option value="asr">ASR — Reconnaissance vocale (Images / Parole spontanée terrain)</option>
+          <option value="tts">TTS — Synthèse vocale (Studio calme / Scripts équilibrés)</option>
+        </select>
       </div>
-      <div class="form-group">
-        <label for="location">Lieu de la collecte</label>
-        <input type="text" id="location" name="location" class="form-control" placeholder="ex: Kindia Centre, Maison des Jeunes">
-      </div>
+
       <div class="form-group">
         <label for="environment">Environnement acoustique</label>
         <select id="environment" name="environment" class="form-control">
@@ -43,53 +44,73 @@
           <option value="noisy">Bruyant (Noisy)</option>
         </select>
       </div>
+
+      <div class="form-group">
+        <label for="location">Lieu de la collecte</label>
+        <input type="text" id="location" name="location" class="form-control" placeholder="ex: Kindia Centre, Conakry">
+      </div>
+
       <div class="form-group">
         <label for="device">Matériel d'enregistrement</label>
-        <input type="text" id="device" name="device" class="form-control" value="browser_mic" placeholder="ex: Navigateur Web / Smartphone">
+        <input type="text" id="device" name="device" class="form-control" value="smartphone_browser" placeholder="ex: Smartphone Android / Micro USB">
       </div>
+
       <div class="form-group">
-        <label for="collector">Enquêteur / Agent de collecte</label>
+        <label for="collector">Enquêteur / Collecteur</label>
         <input type="text" id="collector" name="collector" class="form-control" placeholder="Nom de l'enquêteur">
       </div>
+
+      <div class="form-group">
+        <label for="session_code">Code Session (optionnel, auto-généré)</label>
+        <input type="text" id="session_code" name="session_code" class="form-control" placeholder="ex: SES_000001">
+      </div>
+
       <div class="form-group">
         <label for="notes">Notes / Observations</label>
-        <textarea id="notes" name="notes" class="form-control" placeholder="Conditions météo, humeur du locuteur, bruits parasites..."></textarea>
+        <textarea id="notes" name="notes" class="form-control" placeholder="Conditions acoustiques, remarques..."></textarea>
       </div>
-      <button type="submit" class="btn btn-primary" style="width: 100%;">Créer la Session</button>
+
+      <button type="submit" class="btn btn-primary btn-block">Créer la Session</button>
     </form>
-  </div>
+  </section>
 
   <!-- Liste des sessions -->
-  <div class="card" style="grid-column: span 2;">
-    <h3 style="margin-bottom: 1rem;">Sessions Enregistrées ({{ sessions|length }})</h3>
+  <section class="card">
+    <h3>Sessions Enregistrées ({{ sessions|length }})</h3>
     <div class="table-container">
       <table>
         <thead>
           <tr>
-            <th>Code Session</th>
+            <th>Code</th>
+            <th>Mode</th>
             <th>Locuteur</th>
-            <th>Date</th>
             <th>Environnement</th>
-            <th>Enregistrements</th>
-            <th>Actions</th>
+            <th>Prises</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody>
           {% for sess in sessions %}
           <tr>
-            <td><strong>{{ sess.session_code }}</strong></td>
+            <td>
+              <strong>{{ sess.session_code }}</strong><br>
+              <small style="color: var(--neutral-600);">{{ sess.recorded_at.strftime('%d/%m/%Y %H:%M') }}</small>
+            </td>
+            <td>
+              <span class="badge badge-{{ sess.target_task or 'asr' }}">{{ (sess.target_task or 'asr')|upper }}</span>
+            </td>
             <td>
               {% if sess.speaker %}
-                {{ sess.speaker.speaker_code }} ({{ sess.speaker.region }})
+                <strong>{{ sess.speaker.speaker_code }}</strong><br>
+                <small style="color: var(--neutral-600);">{{ sess.speaker.region or '-' }}</small>
               {% else %}
                 -
               {% endif %}
             </td>
-            <td>{{ sess.recorded_at.strftime('%Y-%m-%d %H:%M') }}</td>
             <td>{{ sess.environment or 'Non spécifié' }}</td>
             <td><span class="badge badge-uploaded">{{ sess.recordings|length }} audio(s)</span></td>
             <td>
-              <a href="/record?session_id={{ sess.id }}" class="btn btn-primary btn-sm">🎙️ Démarrer la collecte</a>
+              <a href="/record?session_id={{ sess.id }}" class="btn btn-primary btn-sm">Collecter</a>
             </td>
           </tr>
           {% else %}
@@ -100,6 +121,6 @@
         </tbody>
       </table>
     </div>
-  </div>
+  </section>
 </div>
 {% endblock %}

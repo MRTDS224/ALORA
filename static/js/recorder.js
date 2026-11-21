@@ -1,147 +1,619 @@
-let mediaRecorder;
-let audioChunks = [];
-let startTime;
-let timerInterval;
-let audioBlob = null;
-let recordingDuration = 0;
+/**
+ * ALORA Mobile-First Field Recorder
+ * - Cross-browser MediaRecorder MIME negotiation (Chrome WebM, Firefox OGG, Safari MP4)
+ * - Live Web Audio VU meter
+ * - WAXAL duration target feedback (non-blocking warning + instant retake)
+ * - Per-speaker stimulus rotation via GET /api/prompts/next
+ * - Offline IndexedDB queue with automatic sync on reconnect
+ */
+(function () {
+  let mediaRecorder = null;
+  let audioChunks = [];
+  let startTime = 0;
+  let timerInterval = null;
+  let audioBlob = null;
+  let recordingDuration = 0;
+  let audioContext = null;
+  let vuRafId = null;
+  let activeStream = null;
+  const skippedPromptIds = new Set();
 
-const btnRecord = document.getElementById("btnRecord");
-const btnStop = document.getElementById("btnStop");
-const btnPlay = document.getElementById("btnPlay");
-const btnUpload = document.getElementById("btnUpload");
-const timerDisplay = document.getElementById("timerDisplay");
-const audioPreview = document.getElementById("audioPreview");
-const statusMsg = document.getElementById("statusMsg");
+  const sessionSelect = document.getElementById("session_id");
+  const promptSelect = document.getElementById("prompt_id");
+  const btnNextPrompt = document.getElementById("btnNextPrompt");
+  const btnRecord = document.getElementById("btnRecord");
+  const btnStop = document.getElementById("btnStop");
+  const btnRetake = document.getElementById("btnRetake");
+  const btnUpload = document.getElementById("btnUpload");
+  const recorderBox = document.getElementById("recorderBox");
+  const timerDisplay = document.getElementById("timerDisplay");
+  const durationGoal = document.getElementById("durationGoal");
+  const vuMeterFill = document.getElementById("vuMeterFill");
+  const audioPreviewWrap = document.getElementById("audioPreviewWrap");
+  const audioPreview = document.getElementById("audioPreview");
+  const statusMsg = document.getElementById("statusMsg");
+  const networkPill = document.getElementById("networkPill");
+  const sessionProgressLabel = document.getElementById("sessionProgressLabel");
+  const taskBadge = document.getElementById("sessionTaskBadge");
+  const offlineBar = document.getElementById("offlineQueueBar");
+  const offlineCountText = document.getElementById("offlineCountText");
+  const btnSyncOffline = document.getElementById("btnSyncOffline");
 
-if (btnRecord) {
-  btnRecord.addEventListener("click", startRecording);
-}
-if (btnStop) {
-  btnStop.addEventListener("click", stopRecording);
-}
-if (btnUpload) {
-  btnUpload.addEventListener("click", uploadRecording);
-}
-
-async function startRecording() {
-  const sessionId = document.getElementById("session_id").value;
-  if (!sessionId) {
-    alert("Veuillez sélectionner une session avant d'enregistrer.");
-    return;
+  function pickSupportedMimeType() {
+    if (typeof MediaRecorder === "undefined" || !MediaRecorder.isTypeSupported) {
+      return "";
+    }
+    const candidates = [
+      "audio/webm;codecs=opus",
+      "audio/ogg;codecs=opus",
+      "audio/webm",
+      "audio/ogg",
+      "audio/mp4",
+    ];
+    for (const mime of candidates) {
+      if (MediaRecorder.isTypeSupported(mime)) {
+        return mime;
+      }
+    }
+    return "";
   }
 
-  audioChunks = [];
-  audioBlob = null;
+  function extensionFromMime(mime) {
+    const m = (mime || "").toLowerCase();
+    if (m.includes("webm")) return "webm";
+    if (m.includes("ogg")) return "ogg";
+    if (m.includes("mp4") || m.includes("m4a")) return "m4a";
+    return "wav";
+  }
 
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaRecorder = new MediaRecorder(stream);
+  function getMinDurationTarget() {
+    if (!promptSelect || !promptSelect.value) return 10;
+    const opt = promptSelect.options[promptSelect.selectedIndex];
+    const raw = opt ? opt.getAttribute("data-min-duration") : "";
+    const parsed = parseFloat(raw);
+    if (!Number.isNaN(parsed) && parsed > 0) return parsed;
+    const pType = opt ? opt.getAttribute("data-type") : "";
+    return pType === "image" ? 15 : 2;
+  }
 
-    mediaRecorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        audioChunks.push(event.data);
+  function formatDuration(sec) {
+    const total = Math.max(0, Math.floor(sec));
+    const m = String(Math.floor(total / 60)).padStart(2, "0");
+    const s = String(total % 60).padStart(2, "0");
+    return `${m}:${s}`;
+  }
+
+  function updateDurationGoalUI(elapsedSec) {
+    if (!durationGoal) return;
+    const target = getMinDurationTarget();
+    if (elapsedSec >= target) {
+      durationGoal.textContent = `Objectif atteint (${formatDuration(elapsedSec)} / ${target}s min recommandés)`;
+      durationGoal.classList.add("goal-met");
+    } else {
+      durationGoal.textContent = `Durée recommandée : au moins ${target}s`;
+      durationGoal.classList.remove("goal-met");
+    }
+  }
+
+  function updateSessionMetaUI() {
+    if (!sessionSelect) return;
+    const opt = sessionSelect.options[sessionSelect.selectedIndex];
+    const task = opt ? opt.getAttribute("data-task") || "asr" : "asr";
+    if (taskBadge) {
+      taskBadge.textContent = task === "tts" ? "Mode TTS · Studio" : "Mode ASR · Terrain";
+      taskBadge.className = `badge ${task === "tts" ? "badge-tts" : "badge-asr"}`;
+    }
+  }
+
+  function renderPromptCard() {
+    if (!promptSelect) return;
+    const opt = promptSelect.options[promptSelect.selectedIndex];
+    const box = document.getElementById("promptBox");
+    const imgWrap = document.getElementById("promptImageWrap");
+    const imgEl = document.getElementById("promptImage");
+    const badgeEl = document.getElementById("promptBadge");
+    const topicEl = document.getElementById("promptTopic");
+    const titleEl = document.getElementById("promptTitle");
+    const contentEl = document.getElementById("promptContent");
+    const descEl = document.getElementById("promptDesc");
+
+    if (!box) return;
+
+    if (promptSelect.value && opt) {
+      const pType = opt.getAttribute("data-type") || "sentence";
+      const pTopic = opt.getAttribute("data-topic") || "";
+      const pTitle = opt.getAttribute("data-title") || "";
+      const pContent = opt.getAttribute("data-content") || "";
+      const pDesc = opt.getAttribute("data-desc") || "";
+      const mediaUrl = opt.getAttribute("data-media-url") || "";
+
+      if (badgeEl) badgeEl.textContent = pType === "image" ? "Description d'image" : pType;
+      if (topicEl) {
+        topicEl.textContent = pTopic ? `Thème : ${pTopic}` : "";
+        topicEl.style.display = pTopic ? "inline-flex" : "none";
       }
-    };
+      if (titleEl) titleEl.textContent = pTitle;
+      if (contentEl) {
+        contentEl.textContent = pType === "image" ? pContent : `« ${pContent} »`;
+      }
+      if (descEl) {
+        descEl.textContent = pDesc ? `Note / Traduction : ${pDesc}` : "";
+        descEl.style.display = pDesc ? "block" : "none";
+      }
+      if (imgWrap && imgEl) {
+        if (mediaUrl) {
+          imgEl.src = mediaUrl;
+          imgEl.alt = pTitle || "Image à décrire en soussou";
+          imgWrap.style.display = "flex";
+        } else {
+          imgEl.removeAttribute("src");
+          imgWrap.style.display = "none";
+        }
+      }
+      box.style.display = "block";
+    } else {
+      box.style.display = "none";
+    }
 
-    mediaRecorder.onstop = () => {
-      audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || "audio/wav" });
-      const audioUrl = URL.createObjectURL(audioBlob);
-      audioPreview.src = audioUrl;
-      audioPreview.style.display = "block";
-      btnUpload.disabled = false;
+    updateDurationGoalUI(0);
+  }
+
+  async function loadNextRotatedPrompt(skipCurrent) {
+    if (!sessionSelect || !sessionSelect.value) {
       if (statusMsg) {
-        statusMsg.innerHTML = `<span style="color: var(--success); font-weight: 600;">Enregistrement terminé ! Cliquez sur "Envoyer la donnée" pour enregistrer dans le corpus.</span>`;
+        statusMsg.innerHTML = `<div class="alert alert-warning">Sélectionnez d'abord une session pour activer la rotation automatique des prompts.</div>`;
       }
+      return;
+    }
+
+    if (skipCurrent && promptSelect && promptSelect.value) {
+      skippedPromptIds.add(promptSelect.value);
+    }
+
+    const params = new URLSearchParams({ session_id: sessionSelect.value });
+    if (skippedPromptIds.size > 0) {
+      params.set("exclude_ids", Array.from(skippedPromptIds).join(","));
+    }
+
+    try {
+      const resp = await fetch(`/api/prompts/next?${params.toString()}`);
+      if (!resp.ok) throw new Error("Impossible de charger le prompt suivant");
+      const data = await resp.json();
+
+      if (sessionProgressLabel) {
+        sessionProgressLabel.textContent = `${data.completed_in_session} prise(s) · ${data.remaining_for_speaker} stimulus restant(s)`;
+      }
+
+      if (!data.prompt) {
+        if (statusMsg) {
+          statusMsg.innerHTML = `<div class="alert alert-info">Tous les prompts actifs ont déjà été enregistrés pour ce locuteur. Vous pouvez passer en parole libre ou ajouter de nouveaux stimuli.</div>`;
+        }
+        return;
+      }
+
+      // Select matching option in dropdown (or add it if missing)
+      const targetId = String(data.prompt.id);
+      let found = false;
+      for (let i = 0; i < promptSelect.options.length; i++) {
+        if (promptSelect.options[i].value === targetId) {
+          promptSelect.selectedIndex = i;
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        const opt = document.createElement("option");
+        opt.value = targetId;
+        opt.textContent = `[${data.prompt.prompt_code}] ${data.prompt.title} (${data.prompt.prompt_type})`;
+        opt.setAttribute("data-title", data.prompt.title || "");
+        opt.setAttribute("data-content", data.prompt.content || "");
+        opt.setAttribute("data-desc", data.prompt.description || "");
+        opt.setAttribute("data-type", data.prompt.prompt_type || "sentence");
+        opt.setAttribute("data-topic", data.prompt.topic || "");
+        opt.setAttribute("data-min-duration", data.prompt.min_duration_seconds || "");
+        if (data.prompt.media_object_key) {
+          opt.setAttribute("data-media-url", `/api/prompts/${targetId}/media`);
+        }
+        promptSelect.appendChild(opt);
+        promptSelect.value = targetId;
+      }
+
+      resetRecorderUI();
+      renderPromptCard();
+    } catch (err) {
+      if (statusMsg) {
+        statusMsg.innerHTML = `<div class="alert alert-warning">Rotation indisponible hors-ligne : sélectionnez un prompt manuellement dans la liste.</div>`;
+      }
+    }
+  }
+
+  function startVuMeter(stream) {
+    stopVuMeter();
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx || !vuMeterFill) return;
+      audioContext = new AudioCtx();
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
+
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      function tick() {
+        analyser.getByteTimeDomainData(dataArray);
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+          const normalized = (dataArray[i] - 128) / 128;
+          sum += normalized * normalized;
+        }
+        const rms = Math.sqrt(sum / dataArray.length);
+        const pct = Math.min(100, Math.round(rms * 280));
+        vuMeterFill.style.width = `${pct}%`;
+        vuRafId = requestAnimationFrame(tick);
+      }
+      tick();
+    } catch (_) {
+      // Non-fatal on restricted devices
+    }
+  }
+
+  function stopVuMeter() {
+    if (vuRafId) {
+      cancelAnimationFrame(vuRafId);
+      vuRafId = null;
+    }
+    if (audioContext) {
+      try {
+        audioContext.close();
+      } catch (_) {}
+      audioContext = null;
+    }
+    if (vuMeterFill) vuMeterFill.style.width = "0%";
+  }
+
+  function resetRecorderUI() {
+    audioChunks = [];
+    audioBlob = null;
+    recordingDuration = 0;
+    if (timerDisplay) {
+      timerDisplay.textContent = "00:00";
+      timerDisplay.classList.remove("active");
+    }
+    if (recorderBox) recorderBox.classList.remove("is-recording");
+    if (audioPreviewWrap) audioPreviewWrap.style.display = "none";
+    if (audioPreview) audioPreview.removeAttribute("src");
+    if (btnUpload) btnUpload.disabled = true;
+    if (btnRetake) btnRetake.style.display = "none";
+    if (statusMsg) statusMsg.innerHTML = "";
+    updateDurationGoalUI(0);
+  }
+
+  async function startRecording() {
+    if (!sessionSelect || !sessionSelect.value) {
+      if (statusMsg) {
+        statusMsg.innerHTML = `<div class="alert alert-warning">Veuillez sélectionner une session avant d'enregistrer.</div>`;
+      }
+      sessionSelect && sessionSelect.focus();
+      return;
+    }
+
+    resetRecorderUI();
+
+    try {
+      activeStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: false,
+          autoGainControl: true,
+        },
+      });
+
+      const mimeType = pickSupportedMimeType();
+      mediaRecorder = mimeType
+        ? new MediaRecorder(activeStream, { mimeType })
+        : new MediaRecorder(activeStream);
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          audioChunks.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        stopVuMeter();
+        const finalMime = mediaRecorder.mimeType || mimeType || "audio/webm";
+        audioBlob = new Blob(audioChunks, { type: finalMime });
+        const audioUrl = URL.createObjectURL(audioBlob);
+
+        if (audioPreview) audioPreview.src = audioUrl;
+        if (audioPreviewWrap) audioPreviewWrap.style.display = "block";
+        if (btnUpload) btnUpload.disabled = false;
+        if (btnRetake) btnRetake.style.display = "inline-flex";
+
+        const minTarget = getMinDurationTarget();
+        if (recordingDuration < minTarget) {
+          if (statusMsg) {
+            statusMsg.innerHTML = `
+              <div class="alert alert-warning">
+                <strong>Durée courte (${recordingDuration.toFixed(1)}s / ${minTarget}s recommandés).</strong>
+                Vous pouvez cliquer sur <em>Recommencer</em> pour enrichir la description, ou envoyer la prise telle quelle.
+              </div>
+            `;
+          }
+        } else if (statusMsg) {
+          statusMsg.innerHTML = `<div class="alert alert-success">Enregistrement prêt (${recordingDuration.toFixed(1)}s). Écoutez l'aperçu puis envoyez.</div>`;
+        }
+      };
+
+      mediaRecorder.start(250);
+      startVuMeter(activeStream);
+
+      startTime = Date.now();
+      timerInterval = setInterval(() => {
+        recordingDuration = (Date.now() - startTime) / 1000;
+        if (timerDisplay) timerDisplay.textContent = formatDuration(recordingDuration);
+        updateDurationGoalUI(recordingDuration);
+      }, 200);
+
+      if (btnRecord) btnRecord.disabled = true;
+      if (btnStop) btnStop.disabled = false;
+      if (btnUpload) btnUpload.disabled = true;
+      if (timerDisplay) timerDisplay.classList.add("active");
+      if (recorderBox) recorderBox.classList.add("is-recording");
+      if (statusMsg) statusMsg.innerHTML = `<div class="alert alert-info">Enregistrement en cours… Parlez naturellement en soussou.</div>`;
+    } catch (err) {
+      if (statusMsg) {
+        statusMsg.innerHTML = `<div class="alert alert-danger">Impossible d'accéder au microphone : ${err.message}</div>`;
+      }
+    }
+  }
+
+  function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      recordingDuration = (Date.now() - startTime) / 1000;
+      if (timerDisplay) timerDisplay.textContent = formatDuration(recordingDuration);
+      updateDurationGoalUI(recordingDuration);
+
+      mediaRecorder.stop();
+      if (activeStream) {
+        activeStream.getTracks().forEach((track) => track.stop());
+        activeStream = null;
+      }
+      clearInterval(timerInterval);
+      if (timerDisplay) timerDisplay.classList.remove("active");
+      if (recorderBox) recorderBox.classList.remove("is-recording");
+      if (btnRecord) btnRecord.disabled = false;
+      if (btnStop) btnStop.disabled = true;
+    }
+  }
+
+  function formatFlags(flagsCsv) {
+    if (!flagsCsv) return `<span class="badge badge-validated">Contrôle auto OK</span>`;
+    const labels = {
+      too_short: "Durée courte",
+      low_snr: "Bruit ambiant élevé",
+      clipping: "Saturation détectée",
+      silence_only: "Silence / voix trop faible",
     };
-
-    mediaRecorder.start();
-    startTime = Date.now();
-    timerInterval = setInterval(updateTimer, 1000);
-
-    btnRecord.disabled = true;
-    btnStop.disabled = false;
-    btnUpload.disabled = true;
-    timerDisplay.classList.add("active");
-    if (statusMsg) statusMsg.textContent = "🔴 Enregistrement en cours...";
-  } catch (err) {
-    alert("Impossible d'accéder au microphone : " + err.message);
-  }
-}
-
-function stopRecording() {
-  if (mediaRecorder && mediaRecorder.state !== "inactive") {
-    mediaRecorder.stop();
-    mediaRecorder.stream.getTracks().forEach((track) => track.stop());
-    clearInterval(timerInterval);
-    timerDisplay.classList.remove("active");
-    btnRecord.disabled = false;
-    btnStop.disabled = true;
-  }
-}
-
-function updateTimer() {
-  const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-  recordingDuration = elapsedSeconds;
-  const minutes = String(Math.floor(elapsedSeconds / 60)).padStart(2, "0");
-  const seconds = String(elapsedSeconds % 60).padStart(2, "0");
-  timerDisplay.textContent = `${minutes}:${seconds}`;
-}
-
-async function uploadRecording() {
-  if (!audioBlob) {
-    alert("Aucun enregistrement disponible à envoyer.");
-    return;
+    return flagsCsv
+      .split(",")
+      .filter(Boolean)
+      .map((f) => `<span class="badge badge-warn">${labels[f] || f}</span>`)
+      .join(" ");
   }
 
-  const sessionId = document.getElementById("session_id").value;
-  const promptId = document.getElementById("prompt_id").value;
+  async function sendAudioBlobToServer(blob, sessionId, promptId, durationSec) {
+    const formData = new FormData();
+    const mimeType = blob.type || "audio/webm";
+    const ext = extensionFromMime(mimeType);
+    formData.append("file", blob, `recording.${ext}`);
+    formData.append("session_id", sessionId);
+    if (promptId) formData.append("prompt_id", promptId);
+    formData.append("duration_seconds", String(Number(durationSec || 0).toFixed(2)));
 
-  if (!sessionId) {
-    alert("Session manquante.");
-    return;
-  }
-
-  const formData = new FormData();
-  const mimeType = audioBlob.type || "audio/wav";
-  let ext = "wav";
-  if (mimeType.includes("webm")) ext = "webm";
-  else if (mimeType.includes("ogg")) ext = "ogg";
-
-  formData.append("file", audioBlob, `recording.${ext}`);
-  formData.append("session_id", sessionId);
-  if (promptId) formData.append("prompt_id", promptId);
-  formData.append("duration_seconds", recordingDuration);
-
-  btnUpload.disabled = true;
-  if (statusMsg) statusMsg.textContent = "⏳ Upload vers MinIO et enregistrement des métadonnées...";
-
-  try {
     const response = await fetch("/api/recordings", {
       method: "POST",
       body: formData,
     });
-
     if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.detail || "Erreur lors de l'upload");
+      let detail = "Erreur lors de l'envoi";
+      try {
+        const err = await response.json();
+        detail = err.detail || detail;
+      } catch (_) {}
+      throw new Error(detail);
+    }
+    return response.json();
+  }
+
+  async function refreshOfflineBanner() {
+    if (networkPill) {
+      if (navigator.onLine) {
+        networkPill.textContent = "En ligne";
+        networkPill.classList.remove("is-offline");
+      } else {
+        networkPill.textContent = "Hors-ligne (sauvegarde locale)";
+        networkPill.classList.add("is-offline");
+      }
     }
 
-    const data = await response.json();
-    if (statusMsg) {
-      statusMsg.innerHTML = `
-        <div style="background: var(--success-light); border: 1px solid var(--success); padding: 1rem; border-radius: 8px;">
-          <strong style="color: var(--success);">✅ Enregistrement réussi !</strong><br>
-          Code Enregistrement : <strong>${data.recording_code}</strong><br>
-          Clé MinIO : <code>${data.audio_object_key}</code><br>
-          Statut : <span class="badge badge-uploaded">${data.recording_status}</span><br>
-          <a href="/recordings/${data.id}" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem;">Consulter / Valider l'audio</a>
-        </div>
-      `;
+    if (!window.AloraOfflineQueue || !offlineBar || !offlineCountText) return;
+    try {
+      const items = await window.AloraOfflineQueue.listPending();
+      if (items.length > 0) {
+        offlineCountText.textContent = `${items.length} audio(s) en attente de synchronisation locale`;
+        offlineBar.classList.add("has-items");
+      } else {
+        offlineBar.classList.remove("has-items");
+      }
+    } catch (_) {}
+  }
+
+  async function syncPendingOfflineQueue() {
+    if (!window.AloraOfflineQueue || !navigator.onLine) {
+      await refreshOfflineBanner();
+      return;
     }
-  } catch (err) {
-    btnUpload.disabled = false;
-    if (statusMsg) {
-      statusMsg.innerHTML = `<span style="color: var(--danger); font-weight: 600;">❌ Échec de l'enregistrement : ${err.message}</span>`;
+    let items = [];
+    try {
+      items = await window.AloraOfflineQueue.listPending();
+    } catch (_) {
+      return;
+    }
+    if (!items.length) {
+      await refreshOfflineBanner();
+      return;
+    }
+
+    if (btnSyncOffline) btnSyncOffline.disabled = true;
+    let synced = 0;
+
+    for (const item of items) {
+      try {
+        await sendAudioBlobToServer(item.blob, item.sessionId, item.promptId, item.durationSeconds);
+        await window.AloraOfflineQueue.removePending(item.id);
+        synced++;
+      } catch (_) {
+        break; // Stop if network failed again
+      }
+    }
+
+    if (btnSyncOffline) btnSyncOffline.disabled = false;
+    await refreshOfflineBanner();
+
+    if (synced > 0 && statusMsg) {
+      statusMsg.innerHTML = `<div class="alert alert-success">${synced} enregistrement(s) hors-ligne synchronisé(s) avec succès.</div>`;
     }
   }
-}
+
+  async function uploadRecording() {
+    if (!audioBlob) return;
+    const sessionId = sessionSelect ? sessionSelect.value : "";
+    const promptId = promptSelect ? promptSelect.value : "";
+    if (!sessionId) return;
+
+    if (btnUpload) btnUpload.disabled = true;
+    if (statusMsg) statusMsg.innerHTML = `<div class="alert alert-info">Envoi et analyse acoustique FFmpeg en cours…</div>`;
+
+    // Offline fallback directly to IndexedDB
+    if (!navigator.onLine && window.AloraOfflineQueue) {
+      try {
+        await window.AloraOfflineQueue.addPending({
+          blob: audioBlob,
+          sessionId,
+          promptId,
+          durationSeconds: recordingDuration,
+        });
+        await refreshOfflineBanner();
+        if (statusMsg) {
+          statusMsg.innerHTML = `
+            <div class="alert alert-warning">
+              <strong>Réseau absent : audio sauvegardé localement sur cet appareil.</strong><br>
+              Il sera envoyé automatiquement dès le retour de la connexion.
+              <div style="margin-top: 0.75rem;">
+                <button type="button" class="btn btn-primary btn-sm" id="btnAfterSaveNext">Prompt suivant →</button>
+              </div>
+            </div>
+          `;
+          const nextBtn = document.getElementById("btnAfterSaveNext");
+          if (nextBtn) nextBtn.addEventListener("click", () => loadNextRotatedPrompt(true));
+        }
+        return;
+      } catch (e) {
+        if (btnUpload) btnUpload.disabled = false;
+        if (statusMsg) statusMsg.innerHTML = `<div class="alert alert-danger">Échec sauvegarde locale : ${e.message}</div>`;
+        return;
+      }
+    }
+
+    try {
+      const data = await sendAudioBlobToServer(audioBlob, sessionId, promptId, recordingDuration);
+      const snrText = data.snr_db !== null && data.snr_db !== undefined ? `${data.snr_db} dB` : "—";
+      const speechPct = data.speech_ratio !== null && data.speech_ratio !== undefined ? `${Math.round(data.speech_ratio * 100)} %` : "—";
+      const durText = data.duration_seconds !== null && data.duration_seconds !== undefined ? `${Number(data.duration_seconds).toFixed(1)} s` : "—";
+
+      if (statusMsg) {
+        statusMsg.innerHTML = `
+          <div class="alert ${data.auto_quality_flags ? "alert-warning" : "alert-success"}" style="text-align: left;">
+            <strong>Enregistrement sauvegardé : ${data.recording_code}</strong>
+            <div style="margin-top: 0.45rem;">${formatFlags(data.auto_quality_flags)}</div>
+            <div class="qa-metrics-grid">
+              <div class="qa-metric-box"><span>Durée réelle</span><strong>${durText}</strong></div>
+              <div class="qa-metric-box"><span>SNR estimé</span><strong>${snrText}</strong></div>
+              <div class="qa-metric-box"><span>Activité vocale</span><strong>${speechPct}</strong></div>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem;">
+              <button type="button" class="btn btn-primary btn-sm" id="btnAfterUploadNext">Prompt suivant (Rotation) →</button>
+              <a href="/recordings/${data.id}" class="btn btn-secondary btn-sm">Voir la fiche</a>
+            </div>
+          </div>
+        `;
+        const nextBtn = document.getElementById("btnAfterUploadNext");
+        if (nextBtn) nextBtn.addEventListener("click", () => loadNextRotatedPrompt(false));
+      }
+
+      // Sync any older queued offline items as well
+      syncPendingOfflineQueue();
+    } catch (err) {
+      // Network error fallback to IndexedDB
+      if (window.AloraOfflineQueue && err instanceof TypeError) {
+        await window.AloraOfflineQueue.addPending({
+          blob: audioBlob,
+          sessionId,
+          promptId,
+          durationSeconds: recordingDuration,
+        });
+        await refreshOfflineBanner();
+        if (statusMsg) {
+          statusMsg.innerHTML = `<div class="alert alert-warning">Coupure réseau détectée : prise sauvegardée localement en file d'attente hors-ligne.</div>`;
+        }
+        return;
+      }
+
+      if (btnUpload) btnUpload.disabled = false;
+      if (statusMsg) {
+        statusMsg.innerHTML = `<div class="alert alert-danger">Échec de l'envoi : ${err.message}</div>`;
+      }
+    }
+  }
+
+  // Event wiring
+  if (btnRecord) btnRecord.addEventListener("click", startRecording);
+  if (btnStop) btnStop.addEventListener("click", stopRecording);
+  if (btnRetake) btnRetake.addEventListener("click", resetRecorderUI);
+  if (btnUpload) btnUpload.addEventListener("click", uploadRecording);
+  if (btnNextPrompt) btnNextPrompt.addEventListener("click", () => loadNextRotatedPrompt(true));
+  if (btnSyncOffline) btnSyncOffline.addEventListener("click", syncPendingOfflineQueue);
+
+  if (sessionSelect) {
+    sessionSelect.addEventListener("change", () => {
+      skippedPromptIds.clear();
+      updateSessionMetaUI();
+      if (sessionSelect.value && (!promptSelect || !promptSelect.value)) {
+        loadNextRotatedPrompt(false);
+      }
+    });
+  }
+
+  if (promptSelect) {
+    promptSelect.addEventListener("change", () => {
+      resetRecorderUI();
+      renderPromptCard();
+    });
+  }
+
+  window.addEventListener("online", () => {
+    refreshOfflineBanner();
+    syncPendingOfflineQueue();
+  });
+  window.addEventListener("offline", refreshOfflineBanner);
+
+  document.addEventListener("DOMContentLoaded", () => {
+    updateSessionMetaUI();
+    renderPromptCard();
+    refreshOfflineBanner();
+    if (sessionSelect && sessionSelect.value && promptSelect && !promptSelect.value) {
+      loadNextRotatedPrompt(false);
+    }
+  });
+})();

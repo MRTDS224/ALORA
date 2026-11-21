@@ -5,10 +5,12 @@
 {% block content %}
 <div class="page-header">
   <div>
-    <h2 class="page-title">Studio de Transcription : {{ recording.recording_code }}</h2>
-    <p class="subtitle">Saisie orthographique, contrôle audio & historisation des versions</p>
+    <h1 class="page-title">Studio de Transcription : {{ recording.recording_code }}</h1>
+    <p class="subtitle">Saisie orthographique, contrôle audio &amp; historisation des versions</p>
   </div>
-  <a href="/transcriptions" class="btn btn-secondary">← Liste des Transcriptions</a>
+  <div class="page-actions">
+    <a href="/transcriptions" class="btn btn-secondary">← Liste des Transcriptions</a>
+  </div>
 </div>
 
 <div class="form-grid">

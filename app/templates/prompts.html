@@ -1,83 +1,116 @@
 {% extends "base.html" %}
 
-{% block title %}Gestion des Prompts — ALORA{% endblock %}
+{% block title %}Prompts &amp; Stimuli Visuels — ALORA{% endblock %}
 
 {% block content %}
 <div class="page-header">
   <div>
-    <h2 class="page-title">Prompts & Stimuli</h2>
-    <p class="subtitle">Gestion des stimuli pour la collecte de parole lue, semi-dirigée et spontanée.</p>
+    <h1 class="page-title">Prompts &amp; Stimuli (Texte &amp; Images)</h1>
+    <p class="subtitle">Bibliothèque de stimuli pour l'élicitation spontanée par images (ASR) et les scripts phonétiques (TTS).</p>
+  </div>
+  <div class="page-actions">
+    <a href="/record" class="btn btn-primary">Ouvrir le studio de collecte</a>
   </div>
 </div>
 
-<div class="form-grid">
-  <!-- Formulaire de création de prompt -->
-  <div class="card">
-    <h3 style="margin-bottom: 1rem;">Nouveau Prompt</h3>
-    <form action="/prompts" method="POST">
+<div class="layout-split">
+  <!-- Formulaire de création -->
+  <section class="card">
+    <h3>Nouveau Stimulus</h3>
+    <form action="/prompts" method="POST" enctype="multipart/form-data">
       <div class="form-group">
-        <label for="title">Titre du Prompt *</label>
-        <input type="text" id="title" name="title" class="form-control" placeholder="ex: Salutations courantes" required>
-      </div>
-      <div class="form-group">
-        <label for="prompt_type">Type de Stimulus</label>
+        <label for="prompt_type">Type de stimulus</label>
         <select id="prompt_type" name="prompt_type" class="form-control">
-          <option value="sentence">Parole lue (Sentence / Phrase)</option>
-          <option value="question">Réponse à une question (Question)</option>
-          <option value="topic">Thématique / Sujet (Topic)</option>
-          <option value="story">Récit / Conte (Story)</option>
-          <option value="image">Description d'image (Image)</option>
-          <option value="free_speech">Parole libre / Spontanée (Free Speech)</option>
+          <option value="image">Description d'image (ASR spontané — WAXAL)</option>
+          <option value="sentence">Phrase à lire (TTS / Script)</option>
+          <option value="question">Question ouverte</option>
+          <option value="topic">Thématique / Discussion</option>
+          <option value="story">Récit / Conte</option>
+          <option value="free_speech">Parole libre</option>
         </select>
       </div>
+
       <div class="form-group">
-        <label for="content">Texte / Contenu du Prompt *</label>
-        <textarea id="content" name="content" class="form-control" placeholder="Texte en Susu ou instruction à lire..." required></textarea>
+        <label for="title">Titre du stimulus *</label>
+        <input type="text" id="title" name="title" class="form-control" placeholder="ex: Marché de fruits à Kindia" required>
       </div>
-      <div class="form-group">
-        <label for="description">Traduction / Description (Optionnel)</label>
-        <textarea id="description" name="description" class="form-control" placeholder="Traduction en français ou explications pour l'enquêteur..."></textarea>
+
+      <div class="form-group" id="imageUploadGroup">
+        <label for="image_file">Image à décrire (JPEG, PNG ou WebP, max 5 Mo)</label>
+        <input type="file" id="image_file" name="image_file" accept="image/jpeg,image/png,image/webp" class="form-control">
+        <img id="imageUploadPreview" class="upload-preview" alt="Aperçu de l'image sélectionnée">
+        <p class="form-hint">Recommandé pour les locuteurs non alphabétisés : le locuteur décrit librement la scène en soussou.</p>
       </div>
+
       <div class="form-group">
-        <label for="topic">Domaine / Thème</label>
-        <input type="text" id="topic" name="topic" class="form-control" placeholder="ex: Agriculture, Santé, Quotidien...">
+        <label for="content">Consigne ou phrase en Soussou *</label>
+        <textarea id="content" name="content" class="form-control" placeholder="ex: Décrivez librement ce que vous voyez sur cette image en soussou..." required></textarea>
       </div>
+
       <div class="form-group">
-        <label for="difficulty">Niveau de difficulté</label>
+        <label for="description">Traduction / Notes enquêteur (optionnel)</label>
+        <textarea id="description" name="description" class="form-control" placeholder="Traduction française ou consignes terrain..."></textarea>
+      </div>
+
+      <div class="form-grid" style="margin-bottom: 1rem;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label for="topic">Domaine / Thème</label>
+          <input type="text" id="topic" name="topic" class="form-control" placeholder="ex: Marché, Agriculture, Santé...">
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label for="min_duration_seconds">Durée min. recommandée (s)</label>
+          <input type="number" step="1" min="1" max="300" id="min_duration_seconds" name="min_duration_seconds" class="form-control" value="15">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="difficulty">Difficulté</label>
         <select id="difficulty" name="difficulty" class="form-control">
-          <option value="easy">Facile (Easy)</option>
-          <option value="medium">Moyen (Medium)</option>
-          <option value="hard">Difficile (Hard)</option>
+          <option value="easy">Facile</option>
+          <option value="medium">Moyen</option>
+          <option value="hard">Difficile</option>
         </select>
       </div>
-      <button type="submit" class="btn btn-primary" style="width: 100%;">Ajouter le Prompt</button>
+
+      <button type="submit" class="btn btn-primary btn-block">Ajouter au catalogue</button>
     </form>
-  </div>
+  </section>
 
   <!-- Liste des prompts -->
-  <div class="card" style="grid-column: span 2;">
-    <h3 style="margin-bottom: 1rem;">Catalogue de Prompts ({{ prompts|length }})</h3>
+  <section class="card">
+    <h3>Catalogue de Stimuli ({{ prompts|length }})</h3>
     <div class="table-container">
       <table>
         <thead>
           <tr>
             <th>Code</th>
-            <th>Type</th>
-            <th>Titre & Contenu</th>
+            <th>Visuel</th>
+            <th>Type &amp; Contenu</th>
             <th>Domaine</th>
             <th>Statut</th>
-            <th>Actions</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody>
           {% for p in prompts %}
           <tr>
             <td><strong>{{ p.prompt_code }}</strong></td>
-            <td><span class="badge badge-uploaded">{{ p.prompt_type }}</span></td>
             <td>
+              {% if p.media_object_key %}
+                <img src="/api/prompts/{{ p.id }}/media" alt="{{ p.title }}" class="prompt-thumb" loading="lazy">
+              {% else %}
+                <span style="color: var(--neutral-600); font-size: 0.8rem;">Texte</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge {% if p.prompt_type == 'image' %}badge-asr{% else %}badge-uploaded{% endif %}">{{ p.prompt_type }}</span>
+              {% if p.min_duration_seconds %}
+                <span class="badge badge-validating">≥ {{ p.min_duration_seconds|int }}s</span>
+              {% endif %}
+              <br>
               <strong>{{ p.title }}</strong><br>
-              <span style="color: var(--neutral-800); font-style: italic;">« {{ p.content }} »</span>
-              {% if p.description %}<br><small style="color: var(--neutral-600);">Fr: {{ p.description }}</small>{% endif %}
+              <span style="color: var(--neutral-800); font-style: italic;">{{ p.content }}</span>
+              {% if p.description %}<br><small style="color: var(--neutral-600);">{{ p.description }}</small>{% endif %}
             </td>
             <td>{{ p.topic or '-' }}</td>
             <td>
@@ -86,7 +119,7 @@
               </span>
             </td>
             <td>
-              <form action="/prompts/{{ p.id }}/toggle" method="POST" style="display: inline;">
+              <form action="/prompts/{{ p.id }}/toggle" method="POST">
                 <button type="submit" class="btn btn-secondary btn-sm">
                   {% if p.active %}Désactiver{% else %}Activer{% endif %}
                 </button>
@@ -95,12 +128,41 @@
           </tr>
           {% else %}
           <tr>
-            <td colspan="6" style="text-align: center; color: var(--neutral-600);">Aucun prompt disponible. Allez-y, ajoutez-en un !</td>
+            <td colspan="6" style="text-align: center; color: var(--neutral-600);">Aucun stimulus disponible. Ajoutez votre première image ou phrase.</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-  </div>
+  </section>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  (function () {
+    const fileInput = document.getElementById("image_file");
+    const preview = document.getElementById("imageUploadPreview");
+    const typeSelect = document.getElementById("prompt_type");
+    const minDur = document.getElementById("min_duration_seconds");
+
+    if (fileInput && preview) {
+      fileInput.addEventListener("change", () => {
+        const f = fileInput.files && fileInput.files[0];
+        if (f) {
+          preview.src = URL.createObjectURL(f);
+          preview.style.display = "block";
+        } else {
+          preview.style.display = "none";
+        }
+      });
+    }
+
+    if (typeSelect && minDur) {
+      typeSelect.addEventListener("change", () => {
+        minDur.value = typeSelect.value === "image" ? "15" : "2";
+      });
+    }
+  })();
+</script>
 {% endblock %}

@@ -1,51 +1,53 @@
 {% extends "base.html" %}
 
-{% block title %}Gestion des Locuteurs — ALORA{% endblock %}
+{% block title %}Gestion des Locuteurs &amp; Consentement — ALORA{% endblock %}
 
 {% block content %}
 <div class="page-header">
   <div>
-    <h2 class="page-title">Locuteurs (Speakers)</h2>
-    <p class="subtitle">Gestion pseudonymisée des participants au corpus scientifique Susu.</p>
+    <h1 class="page-title">Locuteurs Pseudonymisés</h1>
+    <p class="subtitle">Profils anonymes (<code>SPK_xxxxxx</code>), diversité démographique et preuve de consentement oral.</p>
   </div>
 </div>
 
-<div class="form-grid">
+<div class="layout-split">
   <!-- Formulaire de création -->
-  <div class="card">
-    <h3 style="margin-bottom: 1rem;">Nouveau Locuteur</h3>
+  <section class="card">
+    <h3>Nouveau Locuteur</h3>
     <form action="/speakers" method="POST">
       <div class="form-group">
-        <label for="speaker_code">Code Locuteur (Optionnel, auto-généré si vide)</label>
+        <label for="speaker_code">Code Locuteur (optionnel, auto-généré)</label>
         <input type="text" id="speaker_code" name="speaker_code" class="form-control" placeholder="ex: SPK_000001">
       </div>
-      <div class="form-group">
-        <label for="age_group">Tranche d'âge</label>
-        <select id="age_group" name="age_group" class="form-control">
-          <option value="18-25">18-25 ans</option>
-          <option value="26-35">26-35 ans</option>
-          <option value="36-50">36-50 ans</option>
-          <option value="50+">Plus de 50 ans</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label for="gender">Genre</label>
-        <select id="gender" name="gender" class="form-control">
-          <option value="female">Femme (Female)</option>
-          <option value="male">Homme (Male)</option>
-          <option value="other">Autre</option>
-        </select>
+      <div class="form-grid" style="margin-bottom: 1rem;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label for="age_group">Tranche d'âge</label>
+          <select id="age_group" name="age_group" class="form-control">
+            <option value="18-25">18-25 ans</option>
+            <option value="26-35">26-35 ans</option>
+            <option value="36-50">36-50 ans</option>
+            <option value="50+">50 ans et +</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label for="gender">Genre</label>
+          <select id="gender" name="gender" class="form-control">
+            <option value="female">Femme</option>
+            <option value="male">Homme</option>
+            <option value="other">Autre</option>
+          </select>
+        </div>
       </div>
       <div class="form-group">
         <label for="region">Région</label>
         <input type="text" id="region" name="region" class="form-control" placeholder="ex: Kindia, Conakry, Boké..." value="Kindia">
       </div>
       <div class="form-group">
-        <label for="location">Localité / Ville</label>
+        <label for="location">Localité / Quartier</label>
         <input type="text" id="location" name="location" class="form-control" placeholder="ex: Kindia Centre">
       </div>
       <div class="form-group">
-        <label for="native_language">Langue Maternelle</label>
+        <label for="native_language">Langue maternelle</label>
         <input type="text" id="native_language" name="native_language" class="form-control" value="Susu">
       </div>
       <div class="form-group">
@@ -53,30 +55,28 @@
         <input type="text" id="other_languages" name="other_languages" class="form-control" placeholder="ex: Français, Poular">
       </div>
       <div class="form-group">
-        <label for="consent_status">Statut de Consentement</label>
+        <label for="consent_status">Statut de consentement</label>
         <select id="consent_status" name="consent_status" class="form-control">
           <option value="granted">Accordé (Granted)</option>
           <option value="pending">En attente (Pending)</option>
           <option value="revoked">Révoqué (Revoked)</option>
         </select>
       </div>
-      <button type="submit" class="btn btn-primary" style="width: 100%;">Enregistrer le Locuteur</button>
+      <button type="submit" class="btn btn-primary btn-block">Enregistrer le Locuteur</button>
     </form>
-  </div>
+  </section>
 
   <!-- Liste des locuteurs -->
-  <div class="card" style="grid-column: span 2;">
-    <h3 style="margin-bottom: 1rem;">Liste des Locuteurs ({{ speakers|length }})</h3>
+  <section class="card">
+    <h3>Liste des Locuteurs ({{ speakers|length }})</h3>
     <div class="table-container">
       <table>
         <thead>
           <tr>
             <th>Code</th>
-            <th>Âge</th>
-            <th>Genre</th>
+            <th>Profil</th>
             <th>Région</th>
-            <th>Langue nat.</th>
-            <th>Consentement</th>
+            <th>Consentement &amp; Preuve orale</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -84,28 +84,150 @@
           {% for s in speakers %}
           <tr>
             <td><strong>{{ s.speaker_code }}</strong></td>
-            <td>{{ s.age_group }}</td>
-            <td>{{ s.gender }}</td>
+            <td>{{ s.age_group }} · {{ s.gender }}<br><small style="color: var(--neutral-600);">{{ s.native_language }}</small></td>
             <td>{{ s.region or '-' }}</td>
-            <td>{{ s.native_language }}</td>
             <td>
               <span class="badge {% if s.consent_status == 'granted' %}badge-validated{% else %}badge-validating{% endif %}">
                 {{ s.consent_status }}
               </span>
+              {% if s.consent_audio_object_key %}
+                <div style="margin-top: 0.4rem;">
+                  <audio src="/api/speakers/{{ s.id }}/consent-audio" controls preload="none" style="height: 32px; max-width: 190px;"></audio>
+                </div>
+              {% else %}
+                <div style="margin-top: 0.4rem;">
+                  <button
+                    type="button"
+                    class="btn btn-secondary btn-sm btn-consent-record"
+                    data-speaker-id="{{ s.id }}"
+                    data-speaker-code="{{ s.speaker_code }}"
+                  >
+                    Enregistrer consentement vocal
+                  </button>
+                </div>
+              {% endif %}
             </td>
             <td>
-              <a href="/sessions?speaker_id={{ s.id }}" class="btn btn-secondary btn-sm">Sessions</a>
-              <a href="/record?speaker_id={{ s.id }}" class="btn btn-primary btn-sm">🎙️ Enregistrer</a>
+              <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+                <a href="/sessions?speaker_id={{ s.id }}" class="btn btn-secondary btn-sm">Sessions</a>
+                <a href="/record" class="btn btn-primary btn-sm">Collecter</a>
+              </div>
             </td>
           </tr>
           {% else %}
           <tr>
-            <td colspan="7" style="text-align: center; color: var(--neutral-600);">Aucun locuteur enregistré pour le moment.</td>
+            <td colspan="5" style="text-align: center; color: var(--neutral-600);">Aucun locuteur enregistré pour le moment.</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-  </div>
+  </section>
 </div>
+
+<!-- Dialog natif pour l'enregistrement rapide du consentement oral -->
+<dialog id="consentDialog" class="alora-dialog" aria-labelledby="consentDialogTitle">
+  <h3 id="consentDialogTitle" style="margin-bottom: 0.5rem;">Consentement oral</h3>
+  <p id="consentSpeakerLabel" class="subtitle" style="margin-bottom: 1rem;"></p>
+  <div class="alert alert-info" style="font-size: 0.86rem;">
+    Demandez au locuteur de confirmer à voix haute (en soussou ou en français) qu'il accepte que sa voix soit enregistrée de façon anonyme pour la recherche ALORA.
+  </div>
+  <div style="display: flex; gap: 0.6rem; margin-bottom: 1rem;">
+    <button type="button" id="btnConsentStart" class="btn btn-danger" style="flex: 1;">Enregistrer</button>
+    <button type="button" id="btnConsentStop" class="btn btn-secondary" style="flex: 1;" disabled>Arrêter</button>
+  </div>
+  <audio id="consentPreview" controls style="width: 100%; display: none; margin-bottom: 1rem;"></audio>
+  <div id="consentMsg" style="margin-bottom: 1rem;"></div>
+  <div style="display: flex; gap: 0.6rem; justify-content: flex-end;">
+    <button type="button" id="btnConsentClose" class="btn btn-secondary">Fermer</button>
+    <button type="button" id="btnConsentSave" class="btn btn-primary" disabled>Sauvegarder</button>
+  </div>
+</dialog>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  (function () {
+    const dialog = document.getElementById("consentDialog");
+    if (!dialog) return;
+
+    const label = document.getElementById("consentSpeakerLabel");
+    const btnStart = document.getElementById("btnConsentStart");
+    const btnStop = document.getElementById("btnConsentStop");
+    const btnSave = document.getElementById("btnConsentSave");
+    const btnClose = document.getElementById("btnConsentClose");
+    const preview = document.getElementById("consentPreview");
+    const msg = document.getElementById("consentMsg");
+
+    let currentSpeakerId = null;
+    let rec = null;
+    let chunks = [];
+    let blob = null;
+
+    document.querySelectorAll(".btn-consent-record").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        currentSpeakerId = btn.getAttribute("data-speaker-id");
+        label.textContent = `Locuteur : ${btn.getAttribute("data-speaker-code")}`;
+        chunks = [];
+        blob = null;
+        preview.style.display = "none";
+        btnSave.disabled = true;
+        msg.innerHTML = "";
+        dialog.showModal();
+      });
+    });
+
+    btnClose.addEventListener("click", () => {
+      if (rec && rec.state !== "inactive") rec.stop();
+      dialog.close();
+    });
+
+    btnStart.addEventListener("click", async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        chunks = [];
+        rec = new MediaRecorder(stream);
+        rec.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+        rec.onstop = () => {
+          stream.getTracks().forEach((t) => t.stop());
+          blob = new Blob(chunks, { type: rec.mimeType || "audio/webm" });
+          preview.src = URL.createObjectURL(blob);
+          preview.style.display = "block";
+          btnSave.disabled = false;
+          msg.innerHTML = `<div class="alert alert-success">Audio capturé. Cliquez sur Sauvegarder.</div>`;
+        };
+        rec.start();
+        btnStart.disabled = true;
+        btnStop.disabled = false;
+        btnSave.disabled = true;
+        msg.innerHTML = `<div class="alert alert-info">Enregistrement du consentement en cours…</div>`;
+      } catch (err) {
+        msg.innerHTML = `<div class="alert alert-danger">Accès micro refusé : ${err.message}</div>`;
+      }
+    });
+
+    btnStop.addEventListener("click", () => {
+      if (rec && rec.state !== "inactive") rec.stop();
+      btnStart.disabled = false;
+      btnStop.disabled = true;
+    });
+
+    btnSave.addEventListener("click", async () => {
+      if (!blob || !currentSpeakerId) return;
+      btnSave.disabled = true;
+      const fd = new FormData();
+      const ext = (blob.type || "").includes("ogg") ? "ogg" : "webm";
+      fd.append("file", blob, `consent.${ext}`);
+      try {
+        const resp = await fetch(`/api/speakers/${currentSpeakerId}/consent-audio`, { method: "POST", body: fd });
+        if (!resp.ok) throw new Error("Échec de sauvegarde");
+        dialog.close();
+        window.location.reload();
+      } catch (err) {
+        btnSave.disabled = false;
+        msg.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+      }
+    });
+  })();
+</script>
 {% endblock %}
