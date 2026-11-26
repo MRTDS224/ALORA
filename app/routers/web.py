@@ -64,6 +64,12 @@ REVIEWER_ROLES = ("reviewer", "admin")
 ADMIN_ROLES = ("admin",)
 
 
+def _public_base_url(request: Request) -> str:
+    proto = (request.headers.get("x-forwarded-proto") or request.url.scheme or "https").split(",")[0].strip()
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.netloc
+    return f"{proto}://{host}".rstrip("/")
+
+
 # --- PUBLIC PAGES ---
 @web_router.get("/", response_class=HTMLResponse)
 def page_home(
@@ -76,6 +82,7 @@ def page_home(
         context={
             "current_user": current_user,
             "platform_url": auth_service.default_home_for_user(current_user),
+            "base_url": _public_base_url(request),
         },
     )
 
@@ -85,7 +92,10 @@ def page_contribute(request: Request):
     return templates.TemplateResponse(
         request=request,
         name="contribute.html",
-        context={"regions": GUINEA_REGIONS},
+        context={
+            "regions": GUINEA_REGIONS,
+            "base_url": _public_base_url(request),
+        },
     )
 
 
@@ -97,7 +107,10 @@ def page_privacy(
     return templates.TemplateResponse(
         request=request,
         name="privacy.html",
-        context={"current_user": current_user},
+        context={
+            "current_user": current_user,
+            "base_url": _public_base_url(request),
+        },
     )
 
 

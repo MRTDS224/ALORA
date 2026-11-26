@@ -65,6 +65,15 @@ def test_rbac_access_matrix():
     assert home_res.headers.get("x-frame-options") == "DENY"
     assert anon.get("/contribuer").status_code == 200
     assert anon.get("/confidentialite").status_code == 200
+    robots = anon.get("/robots.txt")
+    assert robots.status_code == 200
+    assert "Disallow: /admin/" in robots.text
+    assert "Sitemap:" in robots.text
+    sitemap = anon.get("/sitemap.xml")
+    assert sitemap.status_code == 200
+    assert "xml" in sitemap.headers.get("content-type", "")
+    assert "/contribuer" in sitemap.text
+    assert 'property="og:image" content="http' in home_res.text
     assert anon.get("/login").status_code == 200
     assert anon.get("/dashboard", follow_redirects=False).status_code == 303
     assert anon.get("/record", follow_redirects=False).status_code == 303

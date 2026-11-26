@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Confidentialité &amp; Conditions de participation — ALORA{% endblock %}
+{% block meta_robots %}
+  <meta name="robots" content="index, follow">
+  <meta name="description" content="Politique de confidentialité et conditions de participation ouverte (CC BY 4.0) du projet ALORA pour le soussou et les langues africaines.">
+  <link rel="canonical" href="{{ base_url }}/confidentialite">
+{% endblock %}
 
 {% block content %}
 <div class="card" style="max-width: 820px; margin: 1.5rem auto; padding: 2rem;">

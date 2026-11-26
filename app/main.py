@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from urllib.parse import quote
 
 from fastapi import FastAPI, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import PlainTextResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -141,6 +141,58 @@ app.include_router(api_transcriptions_router)
 app.include_router(api_segmentation_router)
 app.include_router(api_export_router)
 app.include_router(web_router)
+
+
+def _public_base_url(request: Request) -> str:
+    proto = (request.headers.get("x-forwarded-proto") or request.url.scheme or "https").split(",")[0].strip()
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.netloc
+    return f"{proto}://{host}".rstrip("/")
+
+
+@app.get("/robots.txt", response_class=PlainTextResponse, include_in_schema=False)
+def robots_txt(request: Request):
+    base = _public_base_url(request)
+    lines = [
+        "User-agent: *",
+        "Allow: /",
+        "Allow: /contribuer",
+        "Allow: /confidentialite",
+        "Disallow: /api/",
+        "Disallow: /admin/",
+        "Disallow: /dashboard",
+        "Disallow: /login",
+        "Disallow: /logout",
+        "Disallow: /record",
+        "Disallow: /speakers",
+        "Disallow: /sessions",
+        "Disallow: /prompts",
+        "Disallow: /recordings",
+        "Disallow: /transcriptions",
+        f"Sitemap: {base}/sitemap.xml",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+@app.get("/sitemap.xml", include_in_schema=False)
+def sitemap_xml(request: Request):
+    base = _public_base_url(request)
+    today = datetime.date.today().isoformat()
+    urls = [
+        (f"{base}/", "1.0", "weekly"),
+        (f"{base}/contribuer", "0.9", "weekly"),
+        (f"{base}/confidentialite", "0.4", "monthly"),
+    ]
+    entries = "\n".join(
+        f"  <url>\n    <loc>{loc}</loc>\n    <lastmod>{today}</lastmod>\n    <changefreq>{freq}</changefreq>\n    <priority>{prio}</priority>\n  </url>"
+        for loc, prio, freq in urls
+    )
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        f"{entries}\n"
+        "</urlset>\n"
+    )
+    return Response(content=xml, media_type="application/xml")
 
 
 @app.get("/favicon.ico", include_in_schema=False)

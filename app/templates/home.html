@@ -9,15 +9,35 @@
   <link rel="apple-touch-icon" href="{{ static_url('img/alora-icon.png') }}">
   <link rel="manifest" href="{{ static_url('site.webmanifest') }}">
   <meta name="theme-color" content="#0f1a2b">
-  <meta name="description" content="ALORA est un projet de recherche qui construit des ressources vocales ouvertes pour les langues africaines peu dotées, en commençant par le soussou de Guinée.">
+  <meta name="description" content="ALORA est un projet open-source qui construit des ressources vocales ouvertes et de futurs modèles d'IA vocale pour les langues africaines peu dotées, en commençant par le soussou de Guinée.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="{{ base_url }}/">
   <meta property="og:type" content="website">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:site_name" content="ALORA">
+  <meta property="og:url" content="{{ base_url }}/">
   <meta property="og:title" content="ALORA — Donner une voix numérique aux langues africaines">
-  <meta property="og:description" content="Plateforme open-source de collecte vocale pour le soussou (Guinée), initiée à l'INPT Rabat.">
-  <meta property="og:image" content="/static/img/alora-logo.png">
+  <meta property="og:description" content="Plateforme open-source de collecte vocale et de recherche en IA pour le soussou (Guinée) et les langues africaines peu dotées.">
+  <meta property="og:image" content="{{ base_url }}/static/img/alora-logo.png">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="ALORA — Corpus Vocal Soussou">
-  <meta name="twitter:description" content="Ressources vocales ouvertes pour les langues africaines peu dotées, en commençant par le soussou.">
-  <meta name="twitter:image" content="/static/img/alora-logo.png">
+  <meta name="twitter:title" content="ALORA — IA Vocale &amp; Corpus Soussou">
+  <meta name="twitter:description" content="Ressources vocales ouvertes et futurs modèles d'IA pour les langues africaines peu dotées, en commençant par le soussou.">
+  <meta name="twitter:image" content="{{ base_url }}/static/img/alora-logo.png">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "ResearchProject",
+    "name": "ALORA — Automatic Learning for Oral Resource-poor African Languages",
+    "alternateName": "ALORA",
+    "url": "{{ base_url }}/",
+    "logo": "{{ base_url }}/static/img/alora-logo.png",
+    "description": "Projet open-source de collecte de corpus vocaux et d'entraînement de modèles d'IA vocale pour les langues africaines peu dotées, inauguré sur le soussou de Guinée.",
+    "inLanguage": ["fr", "sus"],
+    "areaServed": "GN",
+    "license": "https://creativecommons.org/licenses/by/4.0/",
+    "sameAs": ["https://github.com/MRTDS224/ALORA"]
+  }
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
