@@ -30,7 +30,13 @@
             <strong>{{ m.sender_name }}</strong><br>
             <small style="color: var(--primary);">{{ m.sender_contact }}</small>
           </td>
-          <td><span class="badge badge-uploaded">{{ m.profile_type }}</span></td>
+          <td>
+            {% if m.profile_type == 'bug' %}
+              <span class="badge badge-rejected">Bug / Problème</span>
+            {% else %}
+              <span class="badge badge-uploaded">{{ m.profile_type }}</span>
+            {% endif %}
+          </td>
           <td style="max-width: 420px; white-space: pre-wrap;">{{ m.message }}</td>
           <td>
             <form action="/admin/messages/{{ m.id }}/toggle-read" method="POST">

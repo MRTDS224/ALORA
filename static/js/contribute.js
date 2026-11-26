@@ -328,10 +328,22 @@
         cbTimer.textContent = fmtTime(durationSec);
         updateGauge(durationSec);
       }, 200);
-    } catch (_) {
+    } catch (err) {
       feedbackMsg.className = "cb-msg cb-msg-error";
       feedbackMsg.textContent = "Impossible d'ouvrir le micro. Autorisez le microphone dans votre navigateur puis réessayez.";
       feedbackMsg.style.display = "block";
+      try {
+        fetch("/api/public/client-error", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            context: "contribute_mic",
+            error_name: err && err.name ? err.name : "MicError",
+            error_message: err && err.message ? err.message : String(err),
+            page_url: window.location.pathname,
+          }),
+        }).catch(() => {});
+      } catch (_) {}
     }
   }
 
@@ -416,7 +428,8 @@
           gender: fd.get("gender") || "female",
           age_group: fd.get("age_group") || "18-25",
           region: fd.get("region") || "Conakry",
-          native_language: "Susu",
+          language: "sus",
+          is_native_speaker: fd.get("is_native_speaker") !== "no",
           consent_accepted: consent,
         }),
       });
@@ -450,6 +463,53 @@
       stepDone.style.display = "none";
       stepRecord.style.display = "block";
       await loadNextPhoto();
+    });
+  }
+
+  const bugBtn = document.getElementById("cbOpenBugModal");
+  const bugDialog = document.getElementById("cbBugDialog");
+  const bugClose = document.getElementById("cbBugClose");
+  const bugForm = document.getElementById("cbBugForm");
+  const bugStatus = document.getElementById("cbBugStatus");
+  const bugSubmit = document.getElementById("cbBugSubmit");
+  if (bugBtn && bugDialog && bugForm) {
+    bugBtn.addEventListener("click", () => {
+      if (bugStatus) bugStatus.style.display = "none";
+      bugDialog.showModal();
+    });
+    if (bugClose) bugClose.addEventListener("click", () => bugDialog.close());
+    bugForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (bugSubmit) bugSubmit.disabled = true;
+      const fd = new FormData(bugForm);
+      try {
+        const res = await fetch("/api/public/bug-report", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: fd.get("message"),
+            sender_contact: fd.get("sender_contact") || "",
+            page_url: window.location.pathname,
+            user_agent: navigator.userAgent,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Erreur d'envoi");
+        if (bugStatus) {
+          bugStatus.className = "cb-msg cb-msg-ok";
+          bugStatus.textContent = data.message || "Merci ! Signalement envoyé.";
+          bugStatus.style.display = "block";
+        }
+        bugForm.reset();
+      } catch (err) {
+        if (bugStatus) {
+          bugStatus.className = "cb-msg cb-msg-error";
+          bugStatus.textContent = err.message || "Impossible d'envoyer.";
+          bugStatus.style.display = "block";
+        }
+      } finally {
+        if (bugSubmit) bugSubmit.disabled = false;
+      }
     });
   }
 

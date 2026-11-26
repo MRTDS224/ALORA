@@ -90,14 +90,77 @@
   </main>
 
   <footer class="site-footer">
-    <p>ALORA — <span lang="en">Automatic Learning for Oral Resource-poor African Languages</span> (Soussou — Guinée)</p>
+    <p>ALORA — <span lang="en">Automatic Learning for Oral Resource-poor African Languages</span></p>
     <p>
       Data First • Recherche scientifique • {{ current_year or 2026 }} •
-      <a href="https://github.com/MRTDS224/ALORA" target="_blank" rel="noopener noreferrer">GitHub MRTDS224/ALORA</a>
+      <a href="https://github.com/MRTDS224/ALORA" target="_blank" rel="noopener noreferrer">GitHub MRTDS224/ALORA</a> •
+      <button type="button" id="staffOpenBugModal" style="background: none; border: none; color: var(--primary); font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; padding: 0;">Signaler un bug</button>
     </p>
   </footer>
 
+  <dialog id="staffBugDialog" style="border: none; border-radius: 14px; padding: 1.4rem; max-width: 460px; width: calc(100% - 2rem); box-shadow: 0 20px 50px rgba(15, 26, 43, 0.25);">
+    <h3 style="margin: 0 0 0.35rem;">Signaler un bug / problème</h3>
+    <p class="subtitle" style="margin: 0 0 0.9rem; font-size: 0.88rem;">
+      La page actuelle, votre compte et votre navigateur sont joints automatiquement pour aider au diagnostic.
+    </p>
+    <form id="staffBugForm">
+      <div class="form-group">
+        <label for="staffBugMsg">Description du problème *</label>
+        <textarea id="staffBugMsg" name="message" class="form-control" rows="3" required placeholder="Que faisiez-vous et que s'est-il passé ?"></textarea>
+      </div>
+      <div id="staffBugStatus" class="alert" style="display: none; margin-bottom: 0.75rem;" role="status"></div>
+      <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+        <button type="button" id="staffBugClose" class="btn btn-secondary btn-sm">Fermer</button>
+        <button type="submit" id="staffBugSubmit" class="btn btn-primary btn-sm">Envoyer le signalement</button>
+      </div>
+    </form>
+  </dialog>
+
   <script>
+    (function () {
+      const openBtn = document.getElementById("staffOpenBugModal");
+      const dlg = document.getElementById("staffBugDialog");
+      const closeBtn = document.getElementById("staffBugClose");
+      const form = document.getElementById("staffBugForm");
+      const statusEl = document.getElementById("staffBugStatus");
+      const submitBtn = document.getElementById("staffBugSubmit");
+      if (!openBtn || !dlg || !form) return;
+
+      openBtn.addEventListener("click", () => {
+        if (statusEl) statusEl.style.display = "none";
+        dlg.showModal();
+      });
+      if (closeBtn) closeBtn.addEventListener("click", () => dlg.close());
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (submitBtn) submitBtn.disabled = true;
+        const fd = new FormData(form);
+        try {
+          const res = await fetch("/api/public/bug-report", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              message: fd.get("message"),
+              page_url: window.location.pathname + window.location.search,
+              user_agent: navigator.userAgent,
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail || "Erreur d'envoi");
+          statusEl.className = "alert alert-success";
+          statusEl.textContent = data.message || "Signalement envoyé !";
+          statusEl.style.display = "block";
+          form.reset();
+        } catch (err) {
+          statusEl.className = "alert alert-danger";
+          statusEl.textContent = err.message || "Erreur d'envoi";
+          statusEl.style.display = "block";
+        } finally {
+          if (submitBtn) submitBtn.disabled = false;
+        }
+      });
+    })();
+
     (function () {
       const btn = document.getElementById("navToggle");
       const nav = document.getElementById("primaryNav");
