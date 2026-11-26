@@ -8,7 +8,8 @@ from app.services import recording as recording_service
 def create_quality_annotation(
     db: Session,
     annotation_in: QualityAnnotationCreate,
-    recording_status: Optional[str] = "validated"
+    recording_status: Optional[str] = "validated",
+    reviewer_user_id: Optional[UUID] = None,
 ) -> QualityAnnotation:
     db_quality = QualityAnnotation(
         recording_id=annotation_in.recording_id,
@@ -18,6 +19,7 @@ def create_quality_annotation(
         speech_present=annotation_in.speech_present,
         multiple_speakers=annotation_in.multiple_speakers,
         reviewer=annotation_in.reviewer,
+        reviewer_user_id=reviewer_user_id,
         notes=annotation_in.notes
     )
     db.add(db_quality)

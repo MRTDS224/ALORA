@@ -121,20 +121,27 @@
         </fieldset>
 
         <div class="cb-field">
-          <label for="cbRegion">Votre région ou ville</label>
-          <select id="cbRegion" name="region" class="cb-select">
-            <option value="Conakry">Conakry</option>
-            <option value="Kindia">Kindia</option>
-            <option value="Boké">Boké</option>
-            <option value="Coyah">Coyah</option>
-            <option value="Dubréka">Dubréka</option>
-            <option value="Forécariah">Forécariah</option>
-            <option value="Boffa">Boffa</option>
-            <option value="Fria">Fria</option>
-            <option value="Télimélé">Télimélé</option>
-            <option value="Autre">Autre région / Diaspora</option>
+          <label for="cbRegion">Votre préfecture ou ville</label>
+          <select id="cbRegion" name="region" class="cb-select" data-searchable data-search-placeholder="Rechercher une ville (ex: Conakry, Kindia, Boké)…">
+            {% for r in regions %}
+            <option value="{{ r }}" {% if r == 'Conakry' %}selected{% endif %}>{% if r == 'Autre' %}Autre / Diaspora{% else %}{{ r }}{% endif %}</option>
+            {% endfor %}
           </select>
         </div>
+
+        <fieldset class="cb-fieldset">
+          <legend>Le soussou est-il votre langue maternelle ?</legend>
+          <div class="cb-choice-grid cb-choice-2">
+            <label class="cb-choice">
+              <input type="radio" name="is_native_speaker" value="yes" checked>
+              <span>Oui</span>
+            </label>
+            <label class="cb-choice">
+              <input type="radio" name="is_native_speaker" value="no">
+              <span>Non (2e langue)</span>
+            </label>
+          </div>
+        </fieldset>
 
         <label class="cb-consent">
           <input type="checkbox" id="cbConsent" checked required>
@@ -180,10 +187,10 @@
         </ul>
 
         <details class="cb-help-box">
-          <summary>Besoin d'aide ? Voir un exemple et les conseils</summary>
+          <summary>Besoin d'aide ? Conseils rapides</summary>
           <div class="cb-help-content">
-            <p><strong>Exemple en soussou :</strong> <em>« Mɔxɔe na makiti kui, ginɛɛ na fɛɛrɛ ra, e na mangoe nun banaani matife... »</em> (Des gens sont au marché, des femmes vendent des mangues et des bananes…)</p>
-            <p><strong>Conseils rapides :</strong> parlez normalement sans vous presser, dans un endroit calme. Si le téléphone demande l'accès au microphone, appuyez sur <strong>Autoriser</strong>. Si une photo ne vous inspire pas, appuyez sur <strong>Passer</strong>.</p>
+            <p>Parlez normalement en soussou comme si vous expliquiez la photo à un proche, sans vous presser et dans un endroit calme.</p>
+            <p>Si le téléphone demande l'accès au microphone, appuyez sur <strong>Autoriser</strong>. Si une photo ne vous inspire pas, appuyez simplement sur <strong>Passer cette photo</strong>.</p>
           </div>
         </details>
       </div>
@@ -264,8 +271,32 @@
         <a href="/" class="cb-btn" style="background: #e5e7eb; color: #0f1a2b;">Retour à l'accueil</a>
       </div>
     </section>
+
+    <div style="text-align: center; margin-top: 1.25rem;">
+      <button type="button" id="cbOpenBugModal" class="cb-text-btn" style="font-size: 0.85rem;">
+        Un problème technique ? Signaler
+      </button>
+    </div>
   </main>
 
+  <!-- Modal léger de signalement de bug (sans quitter la session) -->
+  <dialog id="cbBugDialog" style="border: none; border-radius: 16px; padding: 1.4rem; max-width: 420px; width: calc(100% - 2rem); box-shadow: 0 20px 50px rgba(15, 26, 43, 0.3);">
+    <h3 style="margin: 0 0 0.4rem; color: #0f1a2b;">Signaler un problème</h3>
+    <p style="margin: 0 0 0.9rem; font-size: 0.86rem; color: #5a6373;">
+      Micro bloqué, image qui ne charge pas ou autre souci ? Décrivez-le brièvement, la page et votre téléphone sont envoyés automatiquement.
+    </p>
+    <form id="cbBugForm">
+      <textarea id="cbBugMsg" name="message" rows="3" required placeholder="Expliquez ce qui ne marche pas..." style="width: 100%; padding: 0.65rem; border-radius: 10px; border: 1px solid #d1d5db; font: inherit; margin-bottom: 0.6rem;"></textarea>
+      <input type="text" id="cbBugContact" name="sender_contact" placeholder="WhatsApp ou e-mail (optionnel)" style="width: 100%; padding: 0.6rem; border-radius: 10px; border: 1px solid #d1d5db; font: inherit; margin-bottom: 0.75rem;">
+      <div id="cbBugStatus" class="cb-msg" style="display: none; margin-bottom: 0.7rem;" role="status"></div>
+      <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+        <button type="button" id="cbBugClose" style="padding: 0.55rem 0.9rem; border-radius: 10px; border: 1px solid #d1d5db; background: #fff; font: inherit; cursor: pointer;">Fermer</button>
+        <button type="submit" id="cbBugSubmit" style="padding: 0.55rem 1rem; border-radius: 10px; border: none; background: #0f1a2b; color: #fff; font: inherit; font-weight: 700; cursor: pointer;">Envoyer</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="{{ static_url('js/searchable_select.js') }}"></script>
   <script src="{{ static_url('js/offline_queue.js') }}"></script>
   <script src="{{ static_url('js/contribute.js') }}"></script>
 </body>

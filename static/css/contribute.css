@@ -642,3 +642,118 @@ body.cb {
 .cb-help-content p + p {
   margin-top: 0.45rem;
 }
+
+/* --- Searchable select on /contribuer --- */
+.searchable-select-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.select-search-input {
+  width: 100%;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.94rem;
+  font-family: inherit;
+  border: 1.5px solid #d6dce5;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #0f1a2b;
+}
+
+.select-search-input:focus {
+  outline: none;
+  border-color: #0f1a2b;
+  background: #ffffff;
+}
+
+/* Unified single-select dropdown with search inside on /contribuer */
+.multi-select {
+  border: 1.5px solid #d6dce5;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.multi-select[open] {
+  border-color: #0f1a2b;
+}
+
+.multi-select-summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 0.95rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #0f1a2b;
+  cursor: pointer;
+  user-select: none;
+}
+
+.multi-select-summary::-webkit-details-marker {
+  display: none;
+}
+
+.multi-select-summary::after {
+  content: "▾";
+  font-size: 0.9rem;
+  color: #5a6373;
+}
+
+.multi-select[open] .multi-select-summary::after {
+  content: "▴";
+}
+
+.multi-select-panel {
+  border-top: 1px solid #e5e7eb;
+  padding: 0.6rem;
+}
+
+.multi-select-search {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.94rem;
+  font-family: inherit;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.single-select-list {
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.single-select-option {
+  width: 100%;
+  text-align: left;
+  padding: 0.55rem 0.75rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #0f1a2b;
+  font: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.single-select-option:hover {
+  background: #f1f5f9;
+}
+
+.single-select-option.is-selected {
+  background: #e8eef6;
+  font-weight: 700;
+}
+
+.single-select-empty {
+  padding: 0.5rem;
+  font-size: 0.88rem;
+  color: #64748b;
+  text-align: center;
+}

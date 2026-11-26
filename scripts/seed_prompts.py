@@ -174,6 +174,7 @@ def seed_all(seed_dir: Path = Path("seed_data")) -> None:
                             topic=row.get("topic", "").strip() or None,
                             difficulty=row.get("difficulty", "easy").strip() or "easy",
                             min_duration_seconds=float(row.get("min_duration_seconds") or 15.0),
+                            language="mul",
                             media_license=row.get("license", "").strip() or None,
                             media_attribution=row.get("attribution", "").strip() or None,
                             active=True,

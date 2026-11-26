@@ -60,6 +60,7 @@ def test_rbac_access_matrix():
     anon = TestClient(app)
     home_res = anon.get("/")
     assert home_res.status_code == 200
+    assert 'href="/login"' in home_res.text
     assert home_res.headers.get("x-content-type-options") == "nosniff"
     assert home_res.headers.get("x-frame-options") == "DENY"
     assert anon.get("/contribuer").status_code == 200
@@ -75,16 +76,24 @@ def test_rbac_access_matrix():
     col = TestClient(app)
     assert col.post("/login", data={"email": col_email, "password": ephemeral_cred}, follow_redirects=False).status_code == 303
     assert col.get("/record").status_code == 200
+    col_home = col.get("/")
+    assert col_home.status_code == 200
+    assert 'href="/record"' in col_home.text
     assert col.get("/prompts").status_code == 200
     assert col.get("/speakers").status_code == 200
     assert col.get("/sessions").status_code == 200
-    assert col.get("/dashboard").status_code == 403
+    col_dash = col.get("/dashboard")
+    assert col_dash.status_code == 403
+    assert "text/html" in col_dash.headers.get("content-type", "")
+    assert "Retourner à mon espace" in col_dash.text
+    assert 'href="/record"' in col_dash.text
     assert col.get("/admin/users").status_code == 403
     assert col.get("/api/export/corpus").status_code == 403
 
     # 3. Reviewer: can access /dashboard, /recordings, /transcriptions, NOT /admin/users or export
     rev = TestClient(app)
     assert rev.post("/login", data={"email": rev_email, "password": ephemeral_cred}, follow_redirects=False).status_code == 303
+    assert 'href="/dashboard"' in rev.get("/").text
     assert rev.get("/dashboard").status_code == 200
     assert rev.get("/recordings").status_code == 200
     assert rev.get("/transcriptions").status_code == 200
@@ -358,3 +367,250 @@ def test_transcription_multi_reviewer_peer_validation():
     assert r2.status_code == 200
     assert r2.json()["approvals_count"] == 2
     assert r2.json()["status"] == "accepted"
+
+
+def test_multilang_prompt_rotation_and_language_export():
+    cred = uuid.uuid4().hex
+    adm_email = f"admin_ml_{uuid.uuid4().hex[:6]}@alora.local"
+    db = SessionLocal()
+    try:
+        auth_service.create_user(db, adm_email, "Admin MultiLang", cred, role="admin")
+    finally:
+        db.close()
+
+    adm = TestClient(app)
+    assert adm.post("/login", data={"email": adm_email, "password": cred}, follow_redirects=False).status_code == 303
+
+    # Create a Susu sentence ('sus') and a shared multilingual image ('mul')
+    p_sus = adm.post(
+        "/api/prompts",
+        json={"prompt_type": "sentence", "title": "Phrase Susu Only", "content": "I kɛna", "language": "sus"},
+    ).json()
+    p_mul = adm.post(
+        "/api/prompts",
+        json={"prompt_type": "image", "title": "Image Partagée", "content": "Décrivez", "language": "mul"},
+    ).json()
+
+    # Create a Pular ('fuf') session -> should see 'mul' image, NEVER 'sus' sentence
+    spk = adm.post("/api/speakers", json={"age_group": "18-25", "gender": "male", "region": "Labé", "native_language": "Pular"}).json()
+    ses_fuf = adm.post("/api/sessions", json={"speaker_id": spk["id"], "target_task": "tts", "language": "fuf"}).json()
+    nxt = adm.get(f"/api/prompts/next?session_id={ses_fuf['id']}")
+    assert nxt.status_code == 200
+    chosen = nxt.json()["prompt"]
+    assert chosen is not None
+    assert chosen["id"] != p_sus["id"]
+    assert chosen["language"] in {"mul", "fuf"}
+
+    # Language-filtered export endpoint responds 200 with language in filename
+    exp = adm.get("/api/export/corpus?language=sus")
+    assert exp.status_code == 200
+    assert "alora_corpus_sus.zip" in exp.headers.get("content-disposition", "")
+
+
+def test_bug_report_public_and_staff_and_client_error():
+    cred = uuid.uuid4().hex
+    adm_email = f"admin_bug_{uuid.uuid4().hex[:6]}@alora.local"
+    db = SessionLocal()
+    try:
+        auth_service.create_user(db, adm_email, "Admin Bug", cred, role="admin")
+    finally:
+        db.close()
+
+    # 1. Anonymous bug report from /contribuer
+    pub = TestClient(app)
+    r_pub = pub.post(
+        "/api/public/bug-report",
+        json={"message": "Le micro ne s'ouvre pas sur Android", "page_url": "/contribuer"},
+    )
+    assert r_pub.status_code == 201
+
+    # 2. Client JS error beacon
+    r_err = pub.post(
+        "/api/public/client-error",
+        json={"context": "contribute_mic", "error_name": "NotAllowedError", "error_message": "Permission denied", "page_url": "/contribuer"},
+    )
+    assert r_err.status_code == 202
+
+    # 3. Logged-in staff bug report + verify both appear in /admin/messages
+    adm = TestClient(app)
+    assert adm.post("/login", data={"email": adm_email, "password": cred}, follow_redirects=False).status_code == 303
+    r_staff = adm.post(
+        "/api/public/bug-report",
+        json={"message": "Bouton de filtre lent sur /prompts", "page_url": "/prompts"},
+    )
+    assert r_staff.status_code == 201
+
+    inbox = adm.get("/admin/messages")
+    assert inbox.status_code == 200
+    assert "Bug / Problème" in inbox.text
+    assert "Bouton de filtre lent sur /prompts" in inbox.text
+    assert "micro ne s&#39;ouvre pas sur Android" in inbox.text
+    assert adm_email in inbox.text
+
+
+def test_field_ux_one_click_collect_security_and_consistency():
+    """Verify 1-click speaker+session creation, allowlist sanitization, anti-spoofing, and 'mul' image prompts."""
+    from app.models import AuditLog, Prompt, QualityAnnotation, Recording, Session as SessionModel, Speaker, Transcription
+
+    cred = uuid.uuid4().hex
+    col_email = f"col_ux_{uuid.uuid4().hex[:6]}@alora.local"
+    rev_email = f"rev_ux_{uuid.uuid4().hex[:6]}@alora.local"
+    db = SessionLocal()
+    try:
+        col_user = auth_service.create_user(db, col_email, "Enquêteur Réel", cred, role="collector")
+        rev_user = auth_service.create_user(db, rev_email, "Réviseur Réel", cred, role="reviewer")
+        col_id, rev_id = col_user.id, rev_user.id
+    finally:
+        db.close()
+
+    col = TestClient(app)
+    assert col.post("/login", data={"email": col_email, "password": cred}, follow_redirects=False).status_code == 303
+
+    # 0. Verify full alphabetical prefectures (33 + Conakry + Autre) and languages registries
+    from app.core.languages import GUINEA_REGIONS, NATIVE_LANGUAGES
+    assert len(GUINEA_REGIONS) == 35  # 33 prefectures + Conakry + Autre
+    assert GUINEA_REGIONS[-1] == "Autre"
+    assert NATIVE_LANGUAGES[-1] == "Autre"
+    assert "Nzérékoré" in GUINEA_REGIONS and "Conakry" in GUINEA_REGIONS
+    assert "Soussou" in NATIVE_LANGUAGES and "Pular" in NATIVE_LANGUAGES
+
+    # 1. One-click "save_and_collect" on /speakers + allowlist validation on forged inputs & multi-select other_languages
+    resp = col.post(
+        "/speakers",
+        data={
+            "age_group": "26-35",
+            "gender": "male",
+            "region": "Injected<script>",
+            "native_language": "InvalidLang",
+            "other_languages": ["Pular", "Français", "InjectedXSS"],
+            "consent_status": "granted",
+            "action": "save_and_collect",
+        },
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+    loc = resp.headers.get("location", "")
+    assert loc.startswith("/record?session_id=")
+    created_session_id = uuid.UUID(loc.split("session_id=", 1)[1])
+
+    # 2. Forged collector name on POST /sessions is ignored (anti-spoofing)
+    db = SessionLocal()
+    try:
+        sess1 = db.query(SessionModel).filter(SessionModel.id == created_session_id).first()
+        assert sess1 is not None
+        assert sess1.collector == "Enquêteur Réel"
+        assert sess1.collector_user_id == col_id
+        assert sess1.location == "Conakry"  # sanitized fallback
+
+        spk = db.query(Speaker).filter(Speaker.id == sess1.speaker_id).first()
+        assert spk is not None
+        assert spk.region == "Conakry"
+        assert spk.native_language == "Soussou"
+        assert spk.other_languages == "Français, Pular"
+        spk_id = spk.id
+
+        # Audit logs recorded
+        audits = db.query(AuditLog).filter(AuditLog.actor_user_id == col_id).all()
+        actions = {a.action for a in audits}
+        assert "speaker.create" in actions
+        assert "session.create" in actions
+    finally:
+        db.close()
+
+    r_sess2 = col.post(
+        "/sessions",
+        data={
+            "speaker_id": str(spk_id),
+            "location": "Kindia",
+            "environment": "outdoor",
+            "target_task": "asr",
+            "device": "smartphone_mic",
+            "collector": "Fake Spoofed Name",
+        },
+        follow_redirects=False,
+    )
+    assert r_sess2.status_code == 303
+
+    # 3. Creating an image prompt via web form tags language='mul'
+    title_img = f"Image Mul Test {uuid.uuid4().hex[:5]}"
+    r_p = col.post(
+        "/prompts",
+        data={
+            "prompt_type": "image",
+            "title": title_img,
+            "content": "Décrivez la scène",
+            "difficulty": "easy",
+        },
+        follow_redirects=False,
+    )
+    assert r_p.status_code == 303
+
+    # 4. Anti-spoofing on recording evaluation & transcription (reviewer/transcriber forced to current_user)
+    rev = TestClient(app)
+    assert rev.post("/login", data={"email": rev_email, "password": cred}, follow_redirects=False).status_code == 303
+
+    db = SessionLocal()
+    try:
+        prompt_img = db.query(Prompt).filter(Prompt.title == title_img).first()
+        assert prompt_img is not None
+        assert prompt_img.language == "mul"
+
+        sess2 = (
+            db.query(SessionModel)
+            .filter(SessionModel.speaker_id == spk_id, SessionModel.location == "Kindia")
+            .first()
+        )
+        assert sess2 is not None
+        assert sess2.collector == "Enquêteur Réel"
+        assert sess2.collector_user_id == col_id
+
+        rec = Recording(
+            recording_code=f"REC_UX_{uuid.uuid4().hex[:6]}",
+            session_id=sess2.id,
+            audio_object_key="raw/test/ux.wav",
+            recording_status="uploaded",
+        )
+        db.add(rec)
+        db.commit()
+        db.refresh(rec)
+        rec_id = rec.id
+    finally:
+        db.close()
+
+    r_eval = rev.post(
+        f"/recordings/{rec_id}/evaluate",
+        data={
+            "action": "validate",
+            "audio_quality": "good",
+            "noise_level": "low",
+            "speech_present": "true",
+            "reviewer": "Spoofed Reviewer",
+        },
+        follow_redirects=False,
+    )
+    assert r_eval.status_code == 303
+
+    r_tr = rev.post(
+        f"/transcriptions/{rec_id}",
+        data={
+            "transcription_text": "Mɔxɔe na makiti kui",
+            "transcriber": "Spoofed Transcriber",
+        },
+        follow_redirects=False,
+    )
+    assert r_tr.status_code == 303
+
+    db = SessionLocal()
+    try:
+        qa = db.query(QualityAnnotation).filter(QualityAnnotation.recording_id == rec_id).first()
+        assert qa is not None
+        assert qa.reviewer == "Réviseur Réel"
+        assert qa.reviewer_user_id == rev_id
+
+        tr = db.query(Transcription).filter(Transcription.recording_id == rec_id).first()
+        assert tr is not None
+        assert tr.transcriber == "Réviseur Réel"
+        assert tr.author_user_id == rev_id
+        assert tr.language == "sus"
+    finally:
+        db.close()

@@ -12,22 +12,27 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.languages import AGE_GROUPS, GENDERS, GUINEA_REGIONS, get_language_spec, normalize_choice
+from app.core.logging import get_logger
 from app.core.security import (
     CONTRIBUTOR_COOKIE_NAME,
     check_rate_limit,
+    get_client_ip,
     is_secure_cookie,
     sign_token,
     verify_token,
 )
-from app.models import ContactMessage
+from app.models import ContactMessage, User
 from app.schemas.prompt import PromptRead
 from app.schemas.session import SessionCreate
 from app.schemas.speaker import SpeakerCreate
+from app.services import auth as auth_service
 from app.services import prompt as prompt_service
 from app.services import recording as recording_service
 from app.services import session as session_service
 from app.services import speaker as speaker_service
 
+logger = get_logger("public")
 router = APIRouter(prefix="/api/public", tags=["Public Contributor"])
 
 MAX_PUBLIC_AUDIO_BYTES = 8 * 1024 * 1024  # 8 MB
@@ -37,7 +42,9 @@ class PublicOnboardingRequest(BaseModel):
     age_group: str = "18-25"
     gender: str = "female"
     region: str = "Conakry"
-    native_language: str = "Susu"
+    language: str = "sus"
+    is_native_speaker: bool = True
+    native_language: Optional[str] = None
     consent_accepted: bool = True
 
 
@@ -106,13 +113,24 @@ def public_onboarding(
             detail="Veuillez accepter le consentement anonyme avant de commencer.",
         )
 
+    lang_spec = get_language_spec(body.language)
+    clean_age = normalize_choice(body.age_group, AGE_GROUPS, "18-25")
+    clean_gender = normalize_choice(body.gender, GENDERS, "female")
+    clean_region = normalize_choice(body.region, GUINEA_REGIONS, "Conakry")
+    resolved_native = (
+        body.native_language.strip()[:50]
+        if body.native_language and body.native_language.strip()
+        else (lang_spec.name if body.is_native_speaker else f"Non-natif ({lang_spec.name} L2)")
+    )
+
     spk = speaker_service.create_speaker(
         db,
         SpeakerCreate(
-            age_group=body.age_group,
-            gender=body.gender,
-            region=body.region,
-            native_language=body.native_language or "Susu",
+            age_group=clean_age,
+            gender=clean_gender,
+            region=clean_region,
+            native_language=resolved_native,
+            other_languages=lang_spec.name if not body.is_native_speaker else None,
             consent_status="granted",
         ),
     )
@@ -120,9 +138,10 @@ def public_onboarding(
         db,
         SessionCreate(
             speaker_id=spk.id,
-            location=body.region,
+            location=clean_region,
             environment="indoor",
             target_task="asr",
+            language=lang_spec.code,
             source="public_web",
             device="smartphone_mic",
             collector="volontaire_web",
@@ -282,3 +301,88 @@ def public_contact_submit(
     db.commit()
     db.refresh(entry)
     return {"status": "ok", "id": str(entry.id), "message": "Merci ! Votre message a bien été transmis."}
+
+
+class BugReportRequest(BaseModel):
+    message: str
+    page_url: Optional[str] = None
+    user_agent: Optional[str] = None
+    sender_name: Optional[str] = None
+    sender_contact: Optional[str] = None
+    website: Optional[str] = None  # Honeypot
+
+
+@router.post("/bug-report", status_code=status.HTTP_201_CREATED)
+def submit_bug_report(
+    body: BugReportRequest,
+    request: Request,
+    current_user: Optional[User] = Depends(auth_service.get_current_user_optional),
+    db: Session = Depends(get_db),
+):
+    ip = get_client_ip(request)
+    if not check_rate_limit(f"bug:{ip}", max_requests=15, window_seconds=3600):
+        raise HTTPException(status_code=429, detail="Trop de signalements envoyés. Merci de réessayer plus tard.")
+
+    if body.website and body.website.strip():
+        return {"status": "ok", "message": "Merci ! Votre signalement a été enregistré."}
+
+    clean_msg = (body.message or "").strip()
+    if len(clean_msg) < 5:
+        raise HTTPException(status_code=400, detail="Merci de décrire brièvement le problème rencontré.")
+
+    page = (body.page_url or request.headers.get("referer") or "inconnue").strip()[:200]
+    ua = (body.user_agent or request.headers.get("user-agent") or "inconnu").strip()[:220]
+
+    if current_user:
+        who = f"{current_user.full_name} ({current_user.role})"
+        contact = current_user.email
+    else:
+        who = (body.sender_name or "Utilisateur / Locuteur").strip()[:150]
+        contact = (body.sender_contact or "Anonyme (/contribuer)").strip()[:255]
+
+    full_message = f"{clean_msg}\n\n---\n[Page: {page} | Appareil: {ua}]"
+    entry = ContactMessage(
+        sender_name=who[:150],
+        sender_contact=contact[:255],
+        profile_type="bug",
+        message=full_message[:4000],
+        is_read=False,
+    )
+    db.add(entry)
+    db.commit()
+    db.refresh(entry)
+
+    logger.warning(
+        "Bug reported from %s on %s: %s",
+        contact,
+        page,
+        clean_msg[:180],
+        extra={"action": "bug.reported", "actor": contact, "path": page, "ip": ip},
+    )
+    return {"status": "ok", "id": str(entry.id), "message": "Merci ! Le problème a bien été signalé à l'équipe."}
+
+
+class ClientErrorRequest(BaseModel):
+    context: str = "browser"
+    error_name: Optional[str] = None
+    error_message: str
+    page_url: Optional[str] = None
+
+
+@router.post("/client-error", status_code=status.HTTP_202_ACCEPTED)
+def log_client_error(body: ClientErrorRequest, request: Request):
+    ip = get_client_ip(request)
+    if not check_rate_limit(f"client_err:{ip}", max_requests=15, window_seconds=3600):
+        return {"status": "ignored"}
+
+    ua = (request.headers.get("user-agent") or "unknown")[:180]
+    logger.warning(
+        "Client JS/Mic error [%s] on %s: %s (%s) | UA=%s",
+        (body.context or "browser")[:40],
+        (body.page_url or "-")[:120],
+        (body.error_name or "Error")[:60],
+        (body.error_message or "")[:240],
+        ua,
+        extra={"action": "client.error", "path": (body.page_url or "-")[:120], "ip": ip},
+    )
+    return {"status": "logged"}

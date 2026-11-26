@@ -9,6 +9,7 @@ class SessionBase(BaseModel):
     location: Optional[str] = None
     environment: Optional[str] = "quiet_room"
     target_task: str = "asr"  # asr or tts
+    language: str = "sus"     # ISO 639-3 code (e.g. sus, fuf, emk)
     source: str = "field_agent"  # field_agent or public_web
     device: Optional[str] = "smartphone_mic"
     collector: Optional[str] = None
@@ -20,6 +21,7 @@ class SessionCreate(SessionBase):
 class SessionRead(SessionBase):
     id: UUID
     session_code: str
+    collector_user_id: Optional[UUID] = None
     recorded_at: datetime.datetime
     created_at: datetime.datetime
     speaker: Optional[SpeakerRead] = None

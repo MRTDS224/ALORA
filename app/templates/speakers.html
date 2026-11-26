@@ -15,10 +15,6 @@
   <section class="card">
     <h3>Nouveau Locuteur</h3>
     <form action="/speakers" method="POST">
-      <div class="form-group">
-        <label for="speaker_code">Code Locuteur (optionnel, auto-généré)</label>
-        <input type="text" id="speaker_code" name="speaker_code" class="form-control" placeholder="ex: SPK_000001">
-      </div>
       <div class="form-grid" style="margin-bottom: 1rem;">
         <div class="form-group" style="margin-bottom: 0;">
           <label for="age_group">Tranche d'âge</label>
@@ -39,20 +35,41 @@
         </div>
       </div>
       <div class="form-group">
-        <label for="region">Région</label>
-        <input type="text" id="region" name="region" class="form-control" placeholder="ex: Kindia, Conakry, Boké..." value="Kindia">
+        <label for="region">Préfecture / Ville *</label>
+        <select id="region" name="region" class="form-control" data-searchable data-search-placeholder="Rechercher une préfecture (ex: Boké, Kankan, Kindia)…">
+          {% for r in regions %}
+          <option value="{{ r }}" {% if r == default_region %}selected{% endif %}>
+            {% if r == 'Autre' %}Autre / Diaspora{% else %}{{ r }}{% endif %}
+          </option>
+          {% endfor %}
+        </select>
       </div>
       <div class="form-group">
-        <label for="location">Localité / Quartier</label>
-        <input type="text" id="location" name="location" class="form-control" placeholder="ex: Kindia Centre">
+        <label for="native_language">Langue maternelle *</label>
+        <select id="native_language" name="native_language" class="form-control" data-searchable data-search-placeholder="Rechercher une langue…">
+          {% for lang in native_languages %}
+          <option value="{{ lang }}" {% if lang == 'Soussou' %}selected{% endif %}>{{ lang }}</option>
+          {% endfor %}
+        </select>
       </div>
       <div class="form-group">
-        <label for="native_language">Langue maternelle</label>
-        <input type="text" id="native_language" name="native_language" class="form-control" value="Susu">
-      </div>
-      <div class="form-group">
-        <label for="other_languages">Autres langues parlées</label>
-        <input type="text" id="other_languages" name="other_languages" class="form-control" placeholder="ex: Français, Poular">
+        <label>Autres langues parlées (optionnel)</label>
+        <details class="multi-select" data-placeholder="Sélectionner une ou plusieurs langues…">
+          <summary class="multi-select-summary">
+            <span class="multi-select-summary-text is-placeholder">Sélectionner une ou plusieurs langues…</span>
+          </summary>
+          <div class="multi-select-panel">
+            <input type="search" class="multi-select-search" placeholder="Filtrer les langues…" aria-label="Filtrer les autres langues" autocomplete="off">
+            <div class="multi-select-list">
+              {% for lang in native_languages %}
+              <label class="multi-select-option">
+                <input type="checkbox" name="other_languages" value="{{ lang }}">
+                <span>{{ lang }}</span>
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+        </details>
       </div>
       <div class="form-group">
         <label for="consent_status">Statut de consentement</label>
@@ -62,7 +79,17 @@
           <option value="revoked">Révoqué (Revoked)</option>
         </select>
       </div>
-      <button type="submit" class="btn btn-primary btn-block">Enregistrer le Locuteur</button>
+      <p class="form-hint" style="margin-bottom: 0.9rem;">
+        Code locuteur (<code>SPK_xxxxxx</code>) et session associés automatiquement à votre compte (<strong>{{ current_user.full_name }}</strong>).
+      </p>
+      <div style="display: flex; flex-direction: column; gap: 0.55rem;">
+        <button type="submit" name="action" value="save_and_collect" class="btn btn-primary btn-block">
+          Enregistrer et démarrer la collecte →
+        </button>
+        <button type="submit" name="action" value="save" class="btn btn-secondary btn-block">
+          Enregistrer le locuteur seulement
+        </button>
+      </div>
     </form>
   </section>
 
@@ -84,7 +111,12 @@
           {% for s in speakers %}
           <tr>
             <td><strong>{{ s.speaker_code }}</strong></td>
-            <td>{{ s.age_group }} · {{ s.gender }}<br><small style="color: var(--neutral-600);">{{ s.native_language }}</small></td>
+            <td>
+              {{ s.age_group }} · {{ s.gender }}<br>
+              <small style="color: var(--neutral-600);">
+                {{ s.native_language }}{% if s.other_languages %} · + {{ s.other_languages }}{% endif %}
+              </small>
+            </td>
             <td>{{ s.region or '-' }}</td>
             <td>
               <span class="badge {% if s.consent_status == 'granted' %}badge-validated{% else %}badge-validating{% endif %}">
@@ -110,7 +142,11 @@
             <td>
               <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
                 <a href="/sessions?speaker_id={{ s.id }}" class="btn btn-secondary btn-sm">Sessions</a>
-                <a href="/record" class="btn btn-primary btn-sm">Collecter</a>
+                {% if s.sessions %}
+                <a href="/record?session_id={{ s.sessions[-1].id }}" class="btn btn-primary btn-sm">Collecter</a>
+                {% else %}
+                <a href="/sessions?speaker_id={{ s.id }}" class="btn btn-primary btn-sm">Démarrer</a>
+                {% endif %}
               </div>
             </td>
           </tr>
@@ -146,6 +182,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<script src="{{ static_url('js/searchable_select.js') }}"></script>
 <script>
   (function () {
     const dialog = document.getElementById("consentDialog");

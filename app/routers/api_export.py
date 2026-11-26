@@ -27,6 +27,10 @@ def download_corpus_export(
         None,
         description="Filtrer par type de session : 'asr' ou 'tts'.",
     ),
+    language: Optional[str] = Query(
+        None,
+        description="Filtrer par code langue ISO 639-3 (ex: 'sus', 'fuf', 'emk').",
+    ),
     current_user: User = Depends(auth_service.require_api_roles("admin")),
     db: Session = Depends(get_db),
 ):
@@ -42,6 +46,7 @@ def download_corpus_export(
             db,
             include_unvalidated=include_unvalidated,
             target_task=target_task,
+            language=language,
         )
         audit_service.record_audit(
             db=db,
@@ -49,7 +54,12 @@ def download_corpus_export(
             actor=current_user,
             target_type="export",
             target_id=filename,
-            details={"include_unvalidated": include_unvalidated, "target_task": target_task or "all", "size_bytes": len(zip_bytes)},
+            details={
+                "include_unvalidated": include_unvalidated,
+                "target_task": target_task or "all",
+                "language": language or "all",
+                "size_bytes": len(zip_bytes),
+            },
             ip_address=get_client_ip(request),
         )
         return Response(

@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     TRANSCRIPTION_REQUIRED_APPROVALS: int = 2
     LOG_LEVEL: str = "INFO"
 
+    # Multi-language extensibility (ISO 639-3 codes, comma-separated)
+    DEFAULT_LANGUAGE: str = "sus"
+    ACTIVE_LANGUAGES: str = "sus"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
