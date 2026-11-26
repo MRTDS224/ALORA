@@ -1153,3 +1153,42 @@ dialog.alora-dialog::backdrop {
   accent-color: var(--primary, #0f1a2b);
   cursor: pointer;
 }
+
+/* Single-select dropdown option list inside <details class="single-select"> */
+.single-select-list {
+  max-height: 210px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.single-select-option {
+  width: 100%;
+  text-align: left;
+  padding: 0.45rem 0.65rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--neutral-900, #0f172a);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.single-select-option:hover {
+  background: var(--neutral-100, #f1f5f9);
+}
+
+.single-select-option.is-selected {
+  background: #e8eef6;
+  color: var(--primary, #0f1a2b);
+  font-weight: 700;
+}
+
+.single-select-empty {
+  padding: 0.5rem 0.65rem;
+  font-size: 0.86rem;
+  color: var(--neutral-600, #64748b);
+  text-align: center;
+}
