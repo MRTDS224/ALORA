@@ -5,9 +5,12 @@ from typing import List, Optional
 from uuid import UUID
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from app.core.logging import get_logger
 from app.models import Prompt, Recording, Session as SessionModel
 from app.services.audio_qa import analyze_wav_bytes
 from app.services.storage import storage_service
+
+logger = get_logger("recording")
 
 
 def generate_recording_code(db: Session) -> str:
@@ -26,19 +29,30 @@ def generate_recording_code(db: Session) -> str:
     return f"REC_{next_num:06d}"
 
 
-def normalize_audio_ffmpeg(audio_bytes: bytes) -> bytes:
+def normalize_audio_ffmpeg(
+    audio_bytes: bytes,
+    input_ext: str = "webm",
+    content_type: str = "",
+) -> bytes:
     """
     Normalizes input audio bytes to a standards-compliant 16kHz, mono, 16-bit PCM WAV
-    using FFmpeg with a seekable temp output so RIFF/data chunk sizes are always exact.
+    using seekable temp files for BOTH input and output so MP4/M4A (iOS Safari, moov-at-end)
+    and mobile WebM/OGG streams decode reliably.
     """
     if not audio_bytes:
         return audio_bytes
-    tmp_path = None
+    in_path = None
+    out_path = None
+    clean_ext = "".join(ch for ch in (input_ext or "bin").lower() if ch.isalnum())[:8] or "bin"
     try:
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-            tmp_path = tmp.name
+        with tempfile.NamedTemporaryFile(suffix=f".{clean_ext}", delete=False) as tmp_in:
+            tmp_in.write(audio_bytes)
+            in_path = tmp_in.name
 
-        process = subprocess.Popen(
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp_out:
+            out_path = tmp_out.name
+
+        res = subprocess.run(
             [
                 "ffmpeg",
                 "-y",
@@ -46,7 +60,7 @@ def normalize_audio_ffmpeg(audio_bytes: bytes) -> bytes:
                 "-loglevel",
                 "error",
                 "-i",
-                "pipe:0",
+                in_path,
                 "-ar",
                 "16000",
                 "-ac",
@@ -55,26 +69,44 @@ def normalize_audio_ffmpeg(audio_bytes: bytes) -> bytes:
                 "pcm_s16le",
                 "-f",
                 "wav",
-                tmp_path,
+                out_path,
             ],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
+            timeout=30,
         )
-        process.communicate(input=audio_bytes)
-        if process.returncode == 0 and os.path.exists(tmp_path):
-            with open(tmp_path, "rb") as f:
+        if res.returncode == 0 and os.path.exists(out_path):
+            with open(out_path, "rb") as f:
                 out = f.read()
             if len(out) >= 44:
                 return out
+        stderr_msg = (res.stderr or b"").decode("utf-8", errors="replace").strip()[:400]
+        logger.warning(
+            "FFmpeg audio normalization failed",
+            extra={
+                "returncode": res.returncode,
+                "input_bytes": len(audio_bytes),
+                "input_ext": clean_ext,
+                "content_type": content_type,
+                "stderr": stderr_msg,
+            },
+        )
     except Exception as e:
-        print(f"[FFmpeg] Normalization warning: {e}")
+        logger.warning(
+            "FFmpeg audio normalization exception: %s",
+            str(e),
+            extra={
+                "input_bytes": len(audio_bytes),
+                "input_ext": clean_ext,
+                "content_type": content_type,
+            },
+        )
     finally:
-        if tmp_path and os.path.exists(tmp_path):
-            try:
-                os.remove(tmp_path)
-            except OSError:
-                pass
+        for p in (in_path, out_path):
+            if p and os.path.exists(p):
+                try:
+                    os.remove(p)
+                except OSError:
+                    pass
     return audio_bytes
 
 
@@ -91,7 +123,11 @@ def create_recording(
     content_type: str = "audio/wav",
 ) -> Recording:
     # 1. Normalize audio with FFmpeg to 16kHz Mono 16-bit PCM WAV
-    processed_bytes = normalize_audio_ffmpeg(audio_bytes)
+    processed_bytes = normalize_audio_ffmpeg(
+        audio_bytes,
+        input_ext=file_format,
+        content_type=content_type,
+    )
     normalized = processed_bytes != audio_bytes
     final_format = "wav" if normalized else file_format
     final_content_type = "audio/wav" if normalized else content_type

@@ -378,6 +378,10 @@
 
       mediaRecorder.onstop = () => {
         stopVuMeter();
+        if (activeStream) {
+          activeStream.getTracks().forEach((track) => track.stop());
+          activeStream = null;
+        }
         const finalMime = mediaRecorder.mimeType || mimeType || "audio/webm";
         audioBlob = new Blob(audioChunks, { type: finalMime });
         const audioUrl = URL.createObjectURL(audioBlob);
@@ -385,6 +389,14 @@
         if (audioPreview) audioPreview.src = audioUrl;
         if (audioPreviewWrap) audioPreviewWrap.style.display = "block";
         if (btnRetake) btnRetake.style.display = "inline-flex";
+
+        if (!audioBlob || audioBlob.size < 1024) {
+          if (btnUpload) btnUpload.disabled = true;
+          if (statusMsg) {
+            statusMsg.innerHTML = `<div class="alert alert-danger"><strong>Enregistrement vide détecté.</strong> Cliquez sur <em>Recommencer</em> (ou utilisez Chrome/Safari).</div>`;
+          }
+          return;
+        }
 
         const minTarget = getMinDurationTarget();
         if (recordingDuration < HARD_MIN_SECONDS) {
@@ -446,11 +458,8 @@
       if (timerDisplay) timerDisplay.textContent = formatDuration(recordingDuration);
       updateDurationGoalUI(recordingDuration);
 
+      // Stop microphone tracks inside mediaRecorder.onstop so final chunks flush cleanly
       mediaRecorder.stop();
-      if (activeStream) {
-        activeStream.getTracks().forEach((track) => track.stop());
-        activeStream = null;
-      }
       clearInterval(timerInterval);
       if (timerDisplay) timerDisplay.classList.remove("active");
       if (recorderBox) recorderBox.classList.remove("is-recording");

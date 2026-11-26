@@ -309,9 +309,36 @@
       mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) audioChunks.push(e.data); };
       mediaRecorder.onstop = () => {
         stopVu();
-        audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || mime || "audio/webm" });
+        if (activeStream) {
+          activeStream.getTracks().forEach((t) => t.stop());
+          activeStream = null;
+        }
+        const finalMime = mediaRecorder.mimeType || mime || "audio/webm";
+        audioBlob = new Blob(audioChunks, { type: finalMime });
         audioPreview.src = URL.createObjectURL(audioBlob);
         setUiState("review");
+
+        if (!audioBlob || audioBlob.size < 1024) {
+          btnSend.disabled = true;
+          reviewMsg.className = "cb-msg cb-msg-error";
+          reviewMsg.textContent =
+            "Enregistrement vide détecté. Appuyez sur « Recommencer » (ou ouvrez le lien dans Chrome/Safari plutôt que dans Facebook/WhatsApp).";
+          reviewMsg.style.display = "block";
+          try {
+            fetch("/api/public/client-error", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                context: "contribute_empty_blob",
+                error_name: "EmptyAudioBlob",
+                error_message: `size=${audioBlob ? audioBlob.size : 0} mime=${finalMime} dur=${durationSec.toFixed(2)}s`,
+                page_url: window.location.pathname,
+                user_agent: navigator.userAgent,
+              }),
+            }).catch(() => {});
+          } catch (_) {}
+          return;
+        }
 
         if (durationSec < HARD_MIN_SECONDS) {
           btnSend.disabled = true;
@@ -366,11 +393,8 @@
       cbTimer.textContent = fmtTime(durationSec);
       updateGauge(durationSec);
       clearInterval(timerId);
+      // Stop microphone tracks inside mediaRecorder.onstop so the final audio chunks flush cleanly
       mediaRecorder.stop();
-      if (activeStream) {
-        activeStream.getTracks().forEach((t) => t.stop());
-        activeStream = null;
-      }
     }
   }
 
