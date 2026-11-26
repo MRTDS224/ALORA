@@ -153,6 +153,7 @@ ALORA inclut un [Dockerfile](Dockerfile) (Python 3.12 + `uv` + `ffmpeg`), un scr
 | **`GET /transcriptions`** | `reviewer`+ | ✍️ **Studio de transcription** orthographique soussou avec versions (`v1`, `v2`…) |
 | **`GET /admin/messages`** | `reviewer`+ | ✉️ **Boîte de réception** des messages envoyés via le formulaire de contact |
 | **`GET /admin/users`** | `admin` | 👥 **Gestion des comptes collaborateurs** (création & activation/désactivation) |
+| **`GET /admin/audit`** | `admin` | 🛡️ **Journal d'audit immuable** (traçabilité des connexions, validations, exports & modifications) |
 | **`GET /api/export/corpus`** | `admin` | 📦 **Export Dataset ML (`.ZIP`)** (validés par défaut, splits speaker-disjoint, TextGrid, `CC-BY-4.0`) |
 | **`GET /docs`** | Public | 📖 **Documentation OpenAPI / Swagger interactive** |
 

@@ -260,3 +260,101 @@ def test_prompt_view_edit_and_safe_delete():
     del_res = adm.delete(f"/api/prompts/{p_id}")
     assert del_res.status_code == 204
     assert adm.get(f"/api/prompts/{p_id}").status_code == 404
+
+
+def test_audit_logs_and_admin_page():
+    cred = uuid.uuid4().hex
+    adm_email = f"admin_aud_{uuid.uuid4().hex[:6]}@alora.local"
+    rev_email = f"rev_aud_{uuid.uuid4().hex[:6]}@alora.local"
+    db = SessionLocal()
+    try:
+        auth_service.create_user(db, adm_email, "Admin Audit", cred, role="admin")
+        auth_service.create_user(db, rev_email, "Reviewer Audit", cred, role="reviewer")
+    finally:
+        db.close()
+
+    adm = TestClient(app)
+    assert adm.post("/login", data={"email": adm_email, "password": cred}, follow_redirects=False).status_code == 303
+    audit_page = adm.get("/admin/audit")
+    assert audit_page.status_code == 200
+    assert "auth.login_success" in audit_page.text
+    assert adm_email in audit_page.text
+    assert audit_page.headers.get("x-request-id")
+
+    rev = TestClient(app)
+    assert rev.post("/login", data={"email": rev_email, "password": cred}, follow_redirects=False).status_code == 303
+    assert rev.get("/admin/audit").status_code == 403
+
+
+def test_transcription_multi_reviewer_peer_validation():
+    cred = uuid.uuid4().hex
+    e_a = f"rev_a_{uuid.uuid4().hex[:6]}@alora.local"
+    e_b = f"rev_b_{uuid.uuid4().hex[:6]}@alora.local"
+    e_c = f"rev_c_{uuid.uuid4().hex[:6]}@alora.local"
+    db = SessionLocal()
+    try:
+        auth_service.create_user(db, e_a, "Linguiste A", cred, role="reviewer")
+        auth_service.create_user(db, e_b, "Linguiste B", cred, role="reviewer")
+        auth_service.create_user(db, e_c, "Linguiste C", cred, role="reviewer")
+    finally:
+        db.close()
+
+    c_a, c_b, c_c = TestClient(app), TestClient(app), TestClient(app)
+    for client, email in ((c_a, e_a), (c_b, e_b), (c_c, e_c)):
+        assert client.post("/login", data={"email": email, "password": cred}, follow_redirects=False).status_code == 303
+
+    # Setup speaker + session + recording via Linguiste A
+    spk = c_a.post("/api/speakers", json={"age_group": "26-35", "gender": "female", "region": "Kindia"}).json()
+    ses = c_a.post("/api/sessions", json={"speaker_id": spk["id"], "target_task": "asr"}).json()
+    rec = c_a.post(
+        "/api/recordings",
+        data={"session_id": ses["id"], "duration_seconds": "3.0"},
+        files={"file": ("peer.wav", _make_clean_wav(3.0), "audio/wav")},
+    ).json()
+
+    # 1. A creates v1 (always starts as draft)
+    v1 = c_a.post(
+        "/api/transcriptions",
+        json={"recording_id": rec["id"], "transcription_text": "N na sigafe makiti.", "status": "accepted"},
+    )
+    assert v1.status_code == 201
+    v1_data = v1.json()
+    assert v1_data["version"] == 1
+    assert v1_data["transcription_status"] == "draft"
+
+    # 2. A CANNOT self-approve v1 -> 403
+    self_app = c_a.post(f"/api/transcriptions/{v1_data['id']}/review", json={"decision": "approved"})
+    assert self_app.status_code == 403
+
+    # 3. B proposes a corrected version -> creates v2 authored by B
+    corr = c_b.post(
+        f"/api/transcriptions/{v1_data['id']}/review",
+        json={
+            "decision": "changes_requested",
+            "comment": "Orthographe ajustée",
+            "corrected_text": "N na sigafe makiti to.",
+        },
+    )
+    assert corr.status_code == 200
+    v2_info = corr.json()["created_version"]
+    assert v2_info is not None
+    assert v2_info["version"] == 2
+    assert v2_info["status"] == "draft"
+
+    # 4. B CANNOT self-approve v2 (their own correction) -> 403
+    assert c_b.post(f"/api/transcriptions/{v2_info['id']}/review", json={"decision": "approved"}).status_code == 403
+
+    # 5. A approves v2 -> 1/2 -> reviewed
+    r1 = c_a.post(f"/api/transcriptions/{v2_info['id']}/review", json={"decision": "approved"})
+    assert r1.status_code == 200
+    assert r1.json()["approvals_count"] == 1
+    assert r1.json()["status"] == "reviewed"
+
+    # 6. A CANNOT vote twice on v2 -> 400
+    assert c_a.post(f"/api/transcriptions/{v2_info['id']}/review", json={"decision": "approved"}).status_code == 400
+
+    # 7. C approves v2 -> 2/2 -> accepted automatically!
+    r2 = c_c.post(f"/api/transcriptions/{v2_info['id']}/review", json={"decision": "approved"})
+    assert r2.status_code == 200
+    assert r2.json()["approvals_count"] == 2
+    assert r2.json()["status"] == "accepted"

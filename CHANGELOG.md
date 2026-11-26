@@ -4,6 +4,20 @@ Historique des principales évolutions de la plateforme **ALORA**.
 
 ---
 
+## [0.5.0] — 2026-11-26
+
+### Ajouté
+- **Logs structurés JSON & Journal d'audit (`/admin/audit`) :** middleware de traçage avec `X-Request-ID` (format JSON natif Google Cloud Logging), table `audit_logs` en écriture seule et interface de filtrage réservée aux administrateurs.
+- **Validation multiple des transcriptions (protocole pair-review WAXAL) :** table `transcription_reviews`, traçabilité `author_user_id`, interdiction stricte d'auto-validation (`403`), proposition de version corrigée créant automatiquement `v(n+1)` à valider par un pair, et promotion automatique en `accepted` au quorum configurable (`TRANSCRIPTION_REQUIRED_APPROVALS=2`).
+- **Visualisation & édition complète des prompts (`/prompts/{id}`) :** aperçu plein écran, modification des métadonnées et remplacement d'image, barre de recherche/filtres et suppression sécurisée.
+- **Consignes visuelles sur `/contribuer` :** mini-guide en 3 gestes simples, conseils terrain (calme, distance micro, autorisation) et exemple concret en soussou repliable.
+- **CI GitHub Actions & tests `pytest` isolés :** base dédiée `alora_db_test` + stockage temporaire (`/tmp`), pipeline PostgreSQL 18 + FFmpeg + Alembic + Docker.
+
+### Amélioré
+- **Rotation intelligente des prompts :** équilibrage global (priorité aux images les moins enregistrées avec tirage aléatoire dans le top-6) combiné à la mémoire `localStorage` côté navigateur pour ne jamais reproposer les photos déjà vues ou passées.
+
+---
+
 ## [0.4.0] — 2026-11-21
 
 ### Ajouté
