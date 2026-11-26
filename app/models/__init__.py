@@ -35,7 +35,7 @@ class Speaker(Base):
     gender = Column(String(20), nullable=True)     # e.g., 'female', 'male', 'other'
     region = Column(String(100), nullable=True)
     location = Column(String(100), nullable=True)
-    native_language = Column(String(50), nullable=True, default="Susu")
+    native_language = Column(String(50), nullable=True, default="Soussou")
     other_languages = Column(String(255), nullable=True)
     consent_status = Column(String(20), nullable=False, default="granted") # granted, pending, revoked
     consent_audio_object_key = Column(String(500), nullable=True) # Optional oral consent recording in MinIO
@@ -59,6 +59,7 @@ class Session(Base):
     source = Column(String(30), nullable=False, default="field_agent") # field_agent or public_web
     device = Column(String(100), nullable=True)      # e.g. smartphone_mic, usb_mic
     collector = Column(String(100), nullable=True)
+    collector_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), default=now_utc, nullable=False)
 
@@ -176,6 +177,7 @@ class QualityAnnotation(Base):
     speech_present = Column(Boolean, default=True, nullable=False)
     multiple_speakers = Column(Boolean, default=False, nullable=False)
     reviewer = Column(String(100), nullable=True)
+    reviewer_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), default=now_utc, nullable=False)
 

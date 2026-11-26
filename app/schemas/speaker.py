@@ -6,9 +6,9 @@ from pydantic import BaseModel, ConfigDict
 class SpeakerBase(BaseModel):
     age_group: Optional[str] = "18-25"
     gender: Optional[str] = "female"
-    region: Optional[str] = "Kindia"
+    region: Optional[str] = "Conakry"
     location: Optional[str] = None
-    native_language: Optional[str] = "Susu"
+    native_language: Optional[str] = "Soussou"
     other_languages: Optional[str] = None
     consent_status: str = "granted"
 

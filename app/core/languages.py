@@ -5,9 +5,61 @@ cleanly extensible to other under-resourced African languages via ACTIVE_LANGUAG
 """
 
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, List, Optional, Sequence, Tuple
 
 from app.core.config import settings
+
+
+# Controlled vocabularies shared across /contribuer, /speakers, and /sessions
+GUINEA_REGIONS: Tuple[str, ...] = (
+    "Conakry",
+    "Kindia",
+    "Boké",
+    "Coyah",
+    "Dubréka",
+    "Forécariah",
+    "Boffa",
+    "Fria",
+    "Télimélé",
+    "Autre",
+)
+
+NATIVE_LANGUAGES: Tuple[str, ...] = (
+    "Soussou",
+    "Pular",
+    "Malinké",
+    "Kissi",
+    "Guerzé (Kpelle)",
+    "Toma (Loma)",
+    "Français",
+    "Autre",
+)
+
+AGE_GROUPS: Tuple[str, ...] = ("18-25", "26-35", "36-50", "50+")
+GENDERS: Tuple[str, ...] = ("female", "male", "other")
+CONSENT_STATUSES: Tuple[str, ...] = ("granted", "pending", "revoked")
+ENVIRONMENTS: Tuple[str, ...] = ("quiet_room", "indoor", "outdoor", "noisy")
+TARGET_TASKS: Tuple[str, ...] = ("asr", "tts")
+DEVICES: Tuple[str, ...] = (
+    "smartphone_mic",
+    "smartphone_headset",
+    "laptop_mic",
+    "usb_mic",
+    "studio_mic",
+    "voice_recorder",
+    "other",
+)
+
+
+def normalize_choice(value: Optional[str], allowed: Sequence[str], default: str) -> str:
+    """Return value if it matches an allowed choice (exact or case-insensitive), else default."""
+    if not value:
+        return default
+    cleaned = value.strip()
+    if cleaned in allowed:
+        return cleaned
+    lower_map = {item.lower(): item for item in allowed}
+    return lower_map.get(cleaned.lower(), default)
 
 
 @dataclass(frozen=True)

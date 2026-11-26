@@ -134,14 +134,13 @@
       </div>
 
       <div class="form-group">
-        <label for="transcriber">Transcripteur</label>
-        <input type="text" id="transcriber" name="transcriber" class="form-control" value="{{ current_user.full_name if current_user else '' }}">
+        <label for="notes">Notes / Difficultés de transcription</label>
+        <textarea id="notes" name="notes" class="form-control" rows="2" maxlength="1000" placeholder="Mot inaudible, variante dialectale, hésitation..."></textarea>
       </div>
 
-      <div class="form-group">
-        <label for="notes">Notes / Difficultés de transcription</label>
-        <textarea id="notes" name="notes" class="form-control" rows="2" placeholder="Mot inaudible, variante dialectale, hésitation..."></textarea>
-      </div>
+      <p class="form-hint" style="margin-bottom: 0.85rem;">
+        Auteur enregistré automatiquement : <strong>{{ current_user.full_name }}</strong>.
+      </p>
 
       <button type="submit" class="btn btn-secondary" style="width: 100%;">
         Enregistrer en brouillon (v{{ (latest_transcription.version + 1) if latest_transcription else 1 }})

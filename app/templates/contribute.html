@@ -123,16 +123,9 @@
         <div class="cb-field">
           <label for="cbRegion">Votre région ou ville</label>
           <select id="cbRegion" name="region" class="cb-select">
-            <option value="Conakry">Conakry</option>
-            <option value="Kindia">Kindia</option>
-            <option value="Boké">Boké</option>
-            <option value="Coyah">Coyah</option>
-            <option value="Dubréka">Dubréka</option>
-            <option value="Forécariah">Forécariah</option>
-            <option value="Boffa">Boffa</option>
-            <option value="Fria">Fria</option>
-            <option value="Télimélé">Télimélé</option>
-            <option value="Autre">Autre région / Diaspora</option>
+            {% for r in regions %}
+            <option value="{{ r }}">{% if r == 'Autre' %}Autre région / Diaspora{% else %}{{ r }}{% endif %}</option>
+            {% endfor %}
           </select>
         </div>
 

@@ -446,3 +446,163 @@ def test_bug_report_public_and_staff_and_client_error():
     assert "Bouton de filtre lent sur /prompts" in inbox.text
     assert "micro ne s&#39;ouvre pas sur Android" in inbox.text
     assert adm_email in inbox.text
+
+
+def test_field_ux_one_click_collect_security_and_consistency():
+    """Verify 1-click speaker+session creation, allowlist sanitization, anti-spoofing, and 'mul' image prompts."""
+    from app.models import AuditLog, Prompt, QualityAnnotation, Recording, Session as SessionModel, Speaker, Transcription
+
+    cred = uuid.uuid4().hex
+    col_email = f"col_ux_{uuid.uuid4().hex[:6]}@alora.local"
+    rev_email = f"rev_ux_{uuid.uuid4().hex[:6]}@alora.local"
+    db = SessionLocal()
+    try:
+        col_user = auth_service.create_user(db, col_email, "Enquêteur Réel", cred, role="collector")
+        rev_user = auth_service.create_user(db, rev_email, "Réviseur Réel", cred, role="reviewer")
+        col_id, rev_id = col_user.id, rev_user.id
+    finally:
+        db.close()
+
+    col = TestClient(app)
+    assert col.post("/login", data={"email": col_email, "password": cred}, follow_redirects=False).status_code == 303
+
+    # 1. One-click "save_and_collect" on /speakers + allowlist validation on forged inputs
+    resp = col.post(
+        "/speakers",
+        data={
+            "age_group": "26-35",
+            "gender": "male",
+            "region": "Injected<script>",
+            "native_language": "InvalidLang",
+            "other_languages": "  Français, Pular  ",
+            "consent_status": "granted",
+            "action": "save_and_collect",
+        },
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+    loc = resp.headers.get("location", "")
+    assert loc.startswith("/record?session_id=")
+    created_session_id = uuid.UUID(loc.split("session_id=", 1)[1])
+
+    # 2. Forged collector name on POST /sessions is ignored (anti-spoofing)
+    db = SessionLocal()
+    try:
+        sess1 = db.query(SessionModel).filter(SessionModel.id == created_session_id).first()
+        assert sess1 is not None
+        assert sess1.collector == "Enquêteur Réel"
+        assert sess1.collector_user_id == col_id
+        assert sess1.location == "Conakry"  # sanitized fallback
+
+        spk = db.query(Speaker).filter(Speaker.id == sess1.speaker_id).first()
+        assert spk is not None
+        assert spk.region == "Conakry"
+        assert spk.native_language == "Soussou"
+        assert spk.other_languages == "Français, Pular"
+        spk_id = spk.id
+
+        # Audit logs recorded
+        audits = db.query(AuditLog).filter(AuditLog.actor_user_id == col_id).all()
+        actions = {a.action for a in audits}
+        assert "speaker.create" in actions
+        assert "session.create" in actions
+    finally:
+        db.close()
+
+    r_sess2 = col.post(
+        "/sessions",
+        data={
+            "speaker_id": str(spk_id),
+            "location": "Kindia",
+            "environment": "outdoor",
+            "target_task": "asr",
+            "device": "smartphone_mic",
+            "collector": "Fake Spoofed Name",
+        },
+        follow_redirects=False,
+    )
+    assert r_sess2.status_code == 303
+
+    # 3. Creating an image prompt via web form tags language='mul'
+    title_img = f"Image Mul Test {uuid.uuid4().hex[:5]}"
+    r_p = col.post(
+        "/prompts",
+        data={
+            "prompt_type": "image",
+            "title": title_img,
+            "content": "Décrivez la scène",
+            "difficulty": "easy",
+        },
+        follow_redirects=False,
+    )
+    assert r_p.status_code == 303
+
+    # 4. Anti-spoofing on recording evaluation & transcription (reviewer/transcriber forced to current_user)
+    rev = TestClient(app)
+    assert rev.post("/login", data={"email": rev_email, "password": cred}, follow_redirects=False).status_code == 303
+
+    db = SessionLocal()
+    try:
+        prompt_img = db.query(Prompt).filter(Prompt.title == title_img).first()
+        assert prompt_img is not None
+        assert prompt_img.language == "mul"
+
+        sess2 = (
+            db.query(SessionModel)
+            .filter(SessionModel.speaker_id == spk_id, SessionModel.location == "Kindia")
+            .first()
+        )
+        assert sess2 is not None
+        assert sess2.collector == "Enquêteur Réel"
+        assert sess2.collector_user_id == col_id
+
+        rec = Recording(
+            recording_code=f"REC_UX_{uuid.uuid4().hex[:6]}",
+            session_id=sess2.id,
+            audio_object_key="raw/test/ux.wav",
+            recording_status="uploaded",
+        )
+        db.add(rec)
+        db.commit()
+        db.refresh(rec)
+        rec_id = rec.id
+    finally:
+        db.close()
+
+    r_eval = rev.post(
+        f"/recordings/{rec_id}/evaluate",
+        data={
+            "action": "validate",
+            "audio_quality": "good",
+            "noise_level": "low",
+            "speech_present": "true",
+            "reviewer": "Spoofed Reviewer",
+        },
+        follow_redirects=False,
+    )
+    assert r_eval.status_code == 303
+
+    r_tr = rev.post(
+        f"/transcriptions/{rec_id}",
+        data={
+            "transcription_text": "Mɔxɔe na makiti kui",
+            "transcriber": "Spoofed Transcriber",
+        },
+        follow_redirects=False,
+    )
+    assert r_tr.status_code == 303
+
+    db = SessionLocal()
+    try:
+        qa = db.query(QualityAnnotation).filter(QualityAnnotation.recording_id == rec_id).first()
+        assert qa is not None
+        assert qa.reviewer == "Réviseur Réel"
+        assert qa.reviewer_user_id == rev_id
+
+        tr = db.query(Transcription).filter(Transcription.recording_id == rec_id).first()
+        assert tr is not None
+        assert tr.transcriber == "Réviseur Réel"
+        assert tr.author_user_id == rev_id
+        assert tr.language == "sus"
+    finally:
+        db.close()

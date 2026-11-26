@@ -138,14 +138,13 @@
       </div>
 
       <div class="form-group">
-        <label for="reviewer">Évaluateur</label>
-        <input type="text" id="reviewer" name="reviewer" class="form-control" placeholder="Nom du réviseur" value="{{ last_quality.reviewer if last_quality else '' }}">
+        <label for="notes">Notes &amp; Observations</label>
+        <textarea id="notes" name="notes" class="form-control" maxlength="1000" placeholder="Vent, bruit de fond, hésitation...">{{ last_quality.notes if last_quality else '' }}</textarea>
       </div>
 
-      <div class="form-group">
-        <label for="notes">Notes &amp; Observations</label>
-        <textarea id="notes" name="notes" class="form-control" placeholder="Vent, bruit de fond, hésitation...">{{ last_quality.notes if last_quality else '' }}</textarea>
-      </div>
+      <p class="form-hint" style="margin-bottom: 0.85rem;">
+        Évaluateur enregistré automatiquement : <strong>{{ current_user.full_name }}</strong>.
+      </p>
 
       <div class="studio-controls" style="max-width: none; margin-bottom: 0;">
         <button type="submit" name="action" value="validate" class="btn btn-success">Valider</button>

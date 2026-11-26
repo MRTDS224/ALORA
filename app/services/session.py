@@ -20,7 +20,11 @@ def generate_session_code(db: Session) -> str:
             next_num = (db.query(func.count(SessionModel.id)).scalar() or 0) + 1
     return f"SES_{next_num:06d}"
 
-def create_session(db: Session, session_in: SessionCreate) -> SessionModel:
+def create_session(
+    db: Session,
+    session_in: SessionCreate,
+    collector_user_id: Optional[UUID] = None,
+) -> SessionModel:
     code = session_in.session_code or generate_session_code(db)
     db_session = SessionModel(
         session_code=code,
@@ -32,12 +36,22 @@ def create_session(db: Session, session_in: SessionCreate) -> SessionModel:
         source=session_in.source or "field_agent",
         device=session_in.device,
         collector=session_in.collector,
-        notes=session_in.notes
+        collector_user_id=collector_user_id,
+        notes=session_in.notes,
     )
     db.add(db_session)
     db.commit()
     db.refresh(db_session)
     return db_session
+
+
+def get_last_session_for_collector(db: Session, user_id: UUID) -> Optional[SessionModel]:
+    return (
+        db.query(SessionModel)
+        .filter(SessionModel.collector_user_id == user_id)
+        .order_by(SessionModel.created_at.desc())
+        .first()
+    )
 
 def get_sessions(db: Session, skip: int = 0, limit: int = 100, speaker_id: Optional[UUID] = None) -> List[SessionModel]:
     q = db.query(SessionModel)

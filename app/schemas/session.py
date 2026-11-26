@@ -21,6 +21,7 @@ class SessionCreate(SessionBase):
 class SessionRead(SessionBase):
     id: UUID
     session_code: str
+    collector_user_id: Optional[UUID] = None
     recorded_at: datetime.datetime
     created_at: datetime.datetime
     speaker: Optional[SpeakerRead] = None

@@ -46,8 +46,14 @@
       </div>
 
       <div class="form-group">
-        <label for="location">Lieu de la collecte</label>
-        <input type="text" id="location" name="location" class="form-control" placeholder="ex: Kindia Centre, Conakry">
+        <label for="location">Région ou ville de la collecte *</label>
+        <select id="location" name="location" class="form-control">
+          {% for r in regions %}
+          <option value="{{ r }}" {% if r == default_location %}selected{% endif %}>
+            {% if r == 'Autre' %}Autre région / Diaspora{% else %}{{ r }}{% endif %}
+          </option>
+          {% endfor %}
+        </select>
       </div>
 
       <div class="form-group">
@@ -64,19 +70,13 @@
       </div>
 
       <div class="form-group">
-        <label for="collector">Enquêteur / Collecteur</label>
-        <input type="text" id="collector" name="collector" class="form-control" placeholder="Nom de l'enquêteur">
-      </div>
-
-      <div class="form-group">
-        <label for="session_code">Code Session (optionnel, auto-généré)</label>
-        <input type="text" id="session_code" name="session_code" class="form-control" placeholder="ex: SES_000001">
-      </div>
-
-      <div class="form-group">
         <label for="notes">Notes / Observations</label>
-        <textarea id="notes" name="notes" class="form-control" placeholder="Conditions acoustiques, remarques..."></textarea>
+        <textarea id="notes" name="notes" class="form-control" maxlength="1000" placeholder="Conditions acoustiques, remarques..."></textarea>
       </div>
+
+      <p class="form-hint" style="margin-bottom: 0.9rem;">
+        Code session auto-généré (<code>SES_xxxxxx</code>) · Enquêteur associé automatiquement : <strong>{{ current_user.full_name }}</strong>.
+      </p>
 
       <button type="submit" class="btn btn-primary btn-block">Créer la Session</button>
     </form>

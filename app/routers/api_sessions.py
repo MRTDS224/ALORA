@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
+from app.models import User
 from app.schemas.session import SessionCreate, SessionRead
 from app.services import auth as auth_service
 from app.services import session as session_service
@@ -25,9 +26,12 @@ def list_sessions(
 @router.post("", response_model=SessionRead, status_code=status.HTTP_201_CREATED)
 def create_session(
     session_in: SessionCreate,
-    db: Session = Depends(get_db)
+    current_user: User = Depends(auth_service.require_api_roles("collector", "reviewer", "admin")),
+    db: Session = Depends(get_db),
 ):
-    return session_service.create_session(db, session_in)
+    if not session_in.collector:
+        session_in = session_in.model_copy(update={"collector": current_user.full_name})
+    return session_service.create_session(db, session_in, collector_user_id=current_user.id)
 
 @router.get("/{session_id}", response_model=SessionRead)
 def get_session(

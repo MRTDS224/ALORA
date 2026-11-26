@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.languages import get_language_spec
+from app.core.languages import AGE_GROUPS, GENDERS, GUINEA_REGIONS, get_language_spec, normalize_choice
 from app.core.logging import get_logger
 from app.core.security import (
     CONTRIBUTOR_COOKIE_NAME,
@@ -114,8 +114,11 @@ def public_onboarding(
         )
 
     lang_spec = get_language_spec(body.language)
+    clean_age = normalize_choice(body.age_group, AGE_GROUPS, "18-25")
+    clean_gender = normalize_choice(body.gender, GENDERS, "female")
+    clean_region = normalize_choice(body.region, GUINEA_REGIONS, "Conakry")
     resolved_native = (
-        body.native_language.strip()
+        body.native_language.strip()[:50]
         if body.native_language and body.native_language.strip()
         else (lang_spec.name if body.is_native_speaker else f"Non-natif ({lang_spec.name} L2)")
     )
@@ -123,9 +126,9 @@ def public_onboarding(
     spk = speaker_service.create_speaker(
         db,
         SpeakerCreate(
-            age_group=body.age_group,
-            gender=body.gender,
-            region=body.region,
+            age_group=clean_age,
+            gender=clean_gender,
+            region=clean_region,
             native_language=resolved_native,
             other_languages=lang_spec.name if not body.is_native_speaker else None,
             consent_status="granted",
@@ -135,7 +138,7 @@ def public_onboarding(
         db,
         SessionCreate(
             speaker_id=spk.id,
-            location=body.region,
+            location=clean_region,
             environment="indoor",
             target_task="asr",
             language=lang_spec.code,

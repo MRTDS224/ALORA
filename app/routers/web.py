@@ -11,6 +11,17 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.languages import (
+    AGE_GROUPS,
+    CONSENT_STATUSES,
+    DEVICES,
+    ENVIRONMENTS,
+    GENDERS,
+    GUINEA_REGIONS,
+    NATIVE_LANGUAGES,
+    TARGET_TASKS,
+    normalize_choice,
+)
 from app.core.security import (
     SESSION_COOKIE_NAME,
     check_rate_limit,
@@ -70,7 +81,11 @@ def page_home(
 
 @web_router.get("/contribuer", response_class=HTMLResponse)
 def page_contribute(request: Request):
-    return templates.TemplateResponse(request=request, name="contribute.html", context={})
+    return templates.TemplateResponse(
+        request=request,
+        name="contribute.html",
+        context={"regions": GUINEA_REGIONS},
+    )
 
 
 # --- AUTHENTICATION ---
@@ -322,37 +337,95 @@ def page_speakers(
     db: Session = Depends(get_db),
 ):
     speakers = speaker_service.get_speakers(db)
+    last_session = session_service.get_last_session_for_collector(db, current_user.id)
+    default_region = (
+        normalize_choice(last_session.location, GUINEA_REGIONS, "Conakry")
+        if last_session and last_session.location
+        else "Conakry"
+    )
     return templates.TemplateResponse(
         request=request,
         name="speakers.html",
-        context={"speakers": speakers, "current_user": current_user},
+        context={
+            "speakers": speakers,
+            "regions": GUINEA_REGIONS,
+            "native_languages": NATIVE_LANGUAGES,
+            "default_region": default_region,
+            "last_session": last_session,
+            "current_user": current_user,
+        },
     )
 
 
 @web_router.post("/speakers")
 def handle_create_speaker(
+    request: Request,
     age_group: str = Form("18-25"),
     gender: str = Form("female"),
-    region: str = Form("Kindia"),
-    location: Optional[str] = Form(None),
-    native_language: str = Form("Susu"),
+    region: str = Form("Conakry"),
+    native_language: str = Form("Soussou"),
     other_languages: Optional[str] = Form(None),
     consent_status: str = Form("granted"),
-    speaker_code: Optional[str] = Form(None),
+    action: str = Form("save"),
     current_user: User = Depends(auth_service.require_web_roles(*COLLECTOR_ROLES)),
     db: Session = Depends(get_db),
 ):
+    clean_age = normalize_choice(age_group, AGE_GROUPS, "18-25")
+    clean_gender = normalize_choice(gender, GENDERS, "female")
+    clean_region = normalize_choice(region, GUINEA_REGIONS, "Conakry")
+    clean_native = normalize_choice(native_language, NATIVE_LANGUAGES, "Soussou")
+    clean_consent = normalize_choice(consent_status, CONSENT_STATUSES, "granted")
+    clean_other = (other_languages.strip()[:200] or None) if other_languages else None
+
     speaker_in = SpeakerCreate(
-        speaker_code=speaker_code if speaker_code else None,
-        age_group=age_group,
-        gender=gender,
-        region=region,
-        location=location,
-        native_language=native_language,
-        other_languages=other_languages,
-        consent_status=consent_status,
+        age_group=clean_age,
+        gender=clean_gender,
+        region=clean_region,
+        native_language=clean_native,
+        other_languages=clean_other,
+        consent_status=clean_consent,
     )
-    speaker_service.create_speaker(db, speaker_in)
+    created_speaker = speaker_service.create_speaker(db, speaker_in)
+    audit_service.record_audit(
+        db=db,
+        action="speaker.create",
+        actor=current_user,
+        target_type="speaker",
+        target_id=created_speaker.id,
+        details={"speaker_code": created_speaker.speaker_code, "region": clean_region, "native_language": clean_native},
+        ip_address=get_client_ip(request),
+    )
+
+    if action == "save_and_collect":
+        last_sess = session_service.get_last_session_for_collector(db, current_user.id)
+        env = normalize_choice(last_sess.environment if last_sess else None, ENVIRONMENTS, "quiet_room")
+        task = normalize_choice(last_sess.target_task if last_sess else None, TARGET_TASKS, "asr")
+        dev = normalize_choice(last_sess.device if last_sess else None, DEVICES, "smartphone_mic")
+        new_sess = session_service.create_session(
+            db,
+            SessionCreate(
+                speaker_id=created_speaker.id,
+                location=clean_region,
+                environment=env,
+                target_task=task,
+                language=settings.DEFAULT_LANGUAGE,
+                source="field_agent",
+                device=dev,
+                collector=current_user.full_name,
+            ),
+            collector_user_id=current_user.id,
+        )
+        audit_service.record_audit(
+            db=db,
+            action="session.create",
+            actor=current_user,
+            target_type="session",
+            target_id=new_sess.id,
+            details={"session_code": new_sess.session_code, "speaker_code": created_speaker.speaker_code, "quick_start": True},
+            ip_address=get_client_ip(request),
+        )
+        return RedirectResponse(url=f"/record?session_id={new_sess.id}", status_code=303)
+
     return RedirectResponse(url="/speakers", status_code=303)
 
 
@@ -366,12 +439,20 @@ def page_sessions(
 ):
     speakers = speaker_service.get_speakers(db)
     sessions = session_service.get_sessions(db)
+    last_session = session_service.get_last_session_for_collector(db, current_user.id)
+    default_location = (
+        normalize_choice(last_session.location, GUINEA_REGIONS, "Conakry")
+        if last_session and last_session.location
+        else "Conakry"
+    )
     return templates.TemplateResponse(
         request=request,
         name="sessions.html",
         context={
             "speakers": speakers,
             "sessions": sessions,
+            "regions": GUINEA_REGIONS,
+            "default_location": default_location,
             "selected_speaker_id": speaker_id,
             "current_user": current_user,
         },
@@ -380,29 +461,48 @@ def page_sessions(
 
 @web_router.post("/sessions")
 def handle_create_session(
+    request: Request,
     speaker_id: str = Form(...),
-    session_code: Optional[str] = Form(None),
-    location: Optional[str] = Form(None),
+    location: str = Form("Conakry"),
     environment: str = Form("quiet_room"),
     target_task: str = Form("asr"),
     device: str = Form("smartphone_mic"),
-    collector: Optional[str] = Form(None),
     notes: Optional[str] = Form(None),
     current_user: User = Depends(auth_service.require_web_roles(*COLLECTOR_ROLES)),
     db: Session = Depends(get_db),
 ):
+    try:
+        spk_uuid = UUID(speaker_id)
+    except ValueError:
+        return RedirectResponse(url="/sessions", status_code=303)
+
+    clean_location = normalize_choice(location, GUINEA_REGIONS, "Conakry")
+    clean_env = normalize_choice(environment, ENVIRONMENTS, "quiet_room")
+    clean_task = normalize_choice(target_task, TARGET_TASKS, "asr")
+    clean_device = normalize_choice(device, DEVICES, "smartphone_mic")
+    clean_notes = (notes.strip()[:1000] or None) if notes else None
+
     session_in = SessionCreate(
-        speaker_id=UUID(speaker_id),
-        session_code=session_code if session_code else None,
-        location=location,
-        environment=environment,
-        target_task=target_task if target_task in {"asr", "tts"} else "asr",
+        speaker_id=spk_uuid,
+        location=clean_location,
+        environment=clean_env,
+        target_task=clean_task,
+        language=settings.DEFAULT_LANGUAGE,
         source="field_agent",
-        device=device,
-        collector=collector or current_user.full_name,
-        notes=notes,
+        device=clean_device,
+        collector=current_user.full_name,
+        notes=clean_notes,
     )
-    session_service.create_session(db, session_in)
+    created_sess = session_service.create_session(db, session_in, collector_user_id=current_user.id)
+    audit_service.record_audit(
+        db=db,
+        action="session.create",
+        actor=current_user,
+        target_type="session",
+        target_id=created_sess.id,
+        details={"session_code": created_sess.session_code, "location": clean_location, "target_task": clean_task},
+        ip_address=get_client_ip(request),
+    )
     return RedirectResponse(url="/sessions", status_code=303)
 
 
@@ -443,10 +543,12 @@ async def handle_create_prompt(
         except ValueError:
             parsed_min_dur = None
 
+    prompt_lang = "mul" if prompt_type == "image" else settings.DEFAULT_LANGUAGE
     prompt_in = PromptCreate(
         title=title,
         content=content,
         prompt_type=prompt_type,
+        language=prompt_lang,
         description=description,
         topic=topic,
         difficulty=difficulty,
@@ -497,6 +599,7 @@ async def handle_batch_upload_prompts(
             db,
             PromptCreate(
                 prompt_type="image",
+                language="mul",
                 title=f"{title_prefix.strip()} #{idx}",
                 content=content.strip(),
                 topic=topic.strip() or None,
@@ -689,6 +792,7 @@ def page_recording_detail(
 
 @web_router.post("/recordings/{recording_id}/evaluate")
 def handle_evaluate_recording(
+    request: Request,
     recording_id: str,
     action: str = Form(...),
     audio_quality: str = Form("good"),
@@ -696,7 +800,6 @@ def handle_evaluate_recording(
     clipping: Optional[str] = Form(None),
     speech_present: Optional[str] = Form(None),
     multiple_speakers: Optional[str] = Form(None),
-    reviewer: Optional[str] = Form(None),
     notes: Optional[str] = Form(None),
     current_user: User = Depends(auth_service.require_web_roles(*REVIEWER_ROLES)),
     db: Session = Depends(get_db),
@@ -709,22 +812,28 @@ def handle_evaluate_recording(
 
     qual_in = QualityAnnotationCreate(
         recording_id=rec_uuid,
-        audio_quality=audio_quality,
-        noise_level=noise_level,
+        audio_quality=normalize_choice(audio_quality, ("good", "fair", "poor"), "good"),
+        noise_level=normalize_choice(noise_level, ("low", "medium", "high"), "low"),
         clipping=bool(clipping),
         speech_present=bool(speech_present),
         multiple_speakers=bool(multiple_speakers),
-        reviewer=reviewer or current_user.full_name,
-        notes=notes,
+        reviewer=current_user.full_name,
+        notes=(notes.strip()[:1000] or None) if notes else None,
     )
-    quality_service.create_quality_annotation(db, qual_in, recording_status=target_status)
+    quality_service.create_quality_annotation(
+        db,
+        qual_in,
+        recording_status=target_status,
+        reviewer_user_id=current_user.id,
+    )
     audit_service.record_audit(
         db=db,
         action=f"recording.{target_status}",
         actor=current_user,
         target_type="recording",
         target_id=rec_uuid,
-        details={"audio_quality": audio_quality, "noise_level": noise_level},
+        details={"audio_quality": qual_in.audio_quality, "noise_level": qual_in.noise_level},
+        ip_address=get_client_ip(request),
     )
     return RedirectResponse(url=f"/recordings/{recording_id}", status_code=303)
 
@@ -795,7 +904,6 @@ def handle_save_transcription(
     request: Request,
     recording_id: str,
     transcription_text: str = Form(...),
-    transcriber: Optional[str] = Form(None),
     notes: Optional[str] = Form(None),
     current_user: User = Depends(auth_service.require_web_roles(*REVIEWER_ROLES)),
     db: Session = Depends(get_db),
@@ -805,13 +913,19 @@ def handle_save_transcription(
     from app.services import transcription as transcription_service
 
     rec_uuid = UUID(recording_id)
+    rec = recording_service.get_recording_by_id(db, rec_uuid)
+    session_lang = (
+        rec.session.language
+        if rec and rec.session and rec.session.language
+        else settings.DEFAULT_LANGUAGE
+    )
     t_in = TranscriptionCreate(
         recording_id=rec_uuid,
         transcription_text=transcription_text,
-        transcriber=transcriber or current_user.full_name,
-        language_code="sus",
+        transcriber=current_user.full_name,
+        language_code=session_lang,
         status="draft",
-        notes=notes,
+        notes=(notes.strip()[:1000] or None) if notes else None,
     )
     created = transcription_service.create_transcription(db, t_in, author=current_user)
     audit_service.record_audit(
