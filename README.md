@@ -19,16 +19,17 @@ Initié dans le cadre d'un projet de recherche à l'**INPT Rabat** (Maroc), ALOR
 
 ---
 
-## ✨ Fonctionnalités Clés (v0.4.0)
+## ✨ Fonctionnalités Clés (v0.5.0)
 
-- **Vitrine Publique & Parcours Volontaire Sans Friction (`/`, `/contribuer`) :** Page d'accueil grand public avec section À propos / Contact (WhatsApp, e-mail, formulaire intégré) et studio mobile ultra-simple sans compte permettant aux locuteurs natifs de décrire des photos en soussou en quelques secondes.
-- **Élicitation par Images & Rotation Anti-Biais (WAXAL) :** Catalogue initial de **72 photos libres de droits** (12 thèmes du quotidien guinéen / ouest-africain) + 10 phrases soussou TTS, rotation automatique évitant toute répétition par locuteur, et import multi-images pour les enquêteurs.
-- **Collecte Mobile-First & Résilience Hors-Ligne :** Interface responsive vérifiée sur mobile (`360px`), plancher anti-erreur `2 s`, jauge visuelle `15 s – 30 s`, VU-mètre temps réel, compatibilité `MediaRecorder` Chrome/Firefox/Safari et **file d'attente locale IndexedDB** avec synchronisation automatique au retour du réseau.
-- **Normalisation FFmpeg & Contrôle Acoustique Automatique :** Transcodage déterministe en **WAV 16 kHz · Mono · PCM 16-bit** (en-têtes RIFF conformes) avec calcul automatique de la durée réelle, du **SNR estimé (dB)**, du ratio d'activité vocale et de la saturation (*clipping*).
-- **Éthique, Pseudonymisation & Consentement Oral :** Locuteurs anonymisés (`SPK_xxxxxx`), séparation sessions **ASR** (terrain spontané) / **TTS** (studio scripté), liste standardisée du matériel d'enregistrement, et capture optionnelle du **consentement vocal** pour les participants non alphabétisés.
-- **Rôles & Authentification (RBAC) :** Contrôle d'accès sécurisé (`scrypt` + cookies signés `HttpOnly`) distinguant **Public**, **Enquêteur (`collector`)**, **Réviseur/Linguiste (`reviewer`)** et **Administrateur (`admin`)**, avec gestion des comptes (`/admin/users`) et boîte de réception contact (`/admin/messages`).
-- **Transcription Versionnée & Praat `.TextGrid` :** Historique immuable des versions (`v1`, `v2`…), statuts (`draft` → `reviewed` → `accepted`) et génération dynamique de fichiers Praat `.TextGrid`.
-- **Export ML Speaker-Disjoint (`.ZIP`) :** Filtrage des audios validés par défaut, partitions `train` / `validation` / `test` **strictement disjointes par locuteur** et équilibrées en genre, manifeste JSON (`export_manifest.json`) et notice **CC-BY-4.0**.
+- **Vitrine Publique & Parcours Volontaire Sans Friction (`/`, `/contribuer`) :** Page d'accueil grand public avec section À propos / Contact (WhatsApp, e-mail, formulaire intégré), studio mobile ultra-simple sans compte (guide visuel en 3 étapes, question binaire langue maternelle `Oui`/`Non`, sélection de préfecture avec recherche intégrée) et lien d'accès adapté au rôle connecté.
+- **Élicitation par Images & Rotation Anti-Biais (WAXAL) :** Catalogue initial de **72 photos libres de droits** (`language="mul"`, réutilisables sur toute langue africaine) + 10 phrases soussou TTS, rotation équilibrée combinée au `localStorage` navigateur, aperçu/édition complète (`/prompts/{id}`) et import multi-images.
+- **Collecte Terrain 1-Clic & Résilience Hors-Ligne :** Création locuteur + session en **1 clic** sur `/speakers` (*« Enregistrer et démarrer la collecte → »*), listes alphabétiques normalisées des **33 préfectures + Conakry** et des **langues de Guinée** avec recherche sans accent intégrée dans les menus déroulants, multi-sélection par cases à cocher pour les autres langues, jauge visuelle `15 s – 30 s` et **file d'attente IndexedDB** hors-ligne.
+- **Normalisation FFmpeg & Contrôle Acoustique Automatique :** Transcodage déterministe en **WAV 16 kHz · Mono · PCM 16-bit** avec calcul automatique de la durée réelle, du **SNR estimé (dB)**, du ratio d'activité vocale et de la saturation (*clipping*).
+- **Éthique, Pseudonymisation & Consentement Oral :** Locuteurs anonymisés (`SPK_xxxxxx`), séparation sessions **ASR** / **TTS**, liste standardisée du matériel, et capture optionnelle du **consentement vocal** pour les participants non alphabétisés.
+- **Rôles, Sécurité & Traçabilité Complète (RBAC + Audit) :** Hachage `scrypt`, cookies signés `HttpOnly`, page HTML `403` dédiée, validation serveur par listes blanches, liaison automatique `collector_user_id` / `reviewer_user_id` / `author_user_id` (anti-usurpation), **logs JSON structurés** (`X-Request-ID`, natif Google Cloud Logging) et journal d'audit `/admin/audit`.
+- **Signalement de Bugs Intégré :** Bouton « Signaler un bug » accessible aux volontaires (`/contribuer`) et à l'équipe connectée (toutes les pages) avec capture automatique du contexte, badge rouge dans `/admin/messages` et remontée silencieuse des erreurs micro (`POST /api/public/client-error`).
+- **Validation Multi-Pairs des Transcriptions & Praat `.TextGrid` :** Historique immuable (`v1`, `v2`…), interdiction d'auto-validation (`403`), proposition de correction créant `v(n+1)` à valider par un pair, quorum configurable (`TRANSCRIPTION_REQUIRED_APPROVALS=2`) et génération dynamique `.TextGrid`.
+- **Extensibilité Multi-Langues & Export ML Speaker-Disjoint (`.ZIP`) :** Registre central ISO 639-3 (`ACTIVE_LANGUAGES=sus`), export filtrable par langue (`GET /api/export/corpus?language=sus`), partitions `train` / `validation` / `test` strictement disjointes par locuteur, manifeste JSON et notice **CC-BY-4.0**.
 
 ---
 
@@ -40,7 +41,7 @@ Initié dans le cadre d'un projet de recherche à l'**INPT Rabat** (Maroc), ALOR
 - **Stockage Objet S3 :** [MinIO](https://min.io/) (audios WAV, images de prompts, consentements vocaux)
 - **Traitement Audio :** FFmpeg (`pcm_s16le` 16 kHz mono) + analyse acoustique Python stdlib (`wave`, `array`)
 - **Frontend Mobile-First :** HTML5, Vanilla CSS (cache-busting automatique par hash), Web Audio API, IndexedDB
-- **Tests Automatisés :** `pytest`, `httpx` (14 tests unitaires & E2E)
+- **Tests Automatisés :** `pytest`, `httpx` (20 tests unitaires, sécurité & E2E isolés sur base dédiée `alora_db_test`)
 
 ---
 
@@ -49,8 +50,8 @@ Initié dans le cadre d'un projet de recherche à l'**INPT Rabat** (Maroc), ALOR
 ```text
 ALORA/
 ├── app/
-│   ├── core/               # Configuration (.env), DB SQLAlchemy, sécurité scrypt/HMAC & rate-limit
-│   ├── models/             # Modèles ORM (User, Speaker, Session, Prompt, Recording, QA, Transcription, Segment, WordAnnotation, ContactMessage)
+│   ├── core/               # Config (.env), DB SQLAlchemy, registre langues/préfectures, logs JSON, sécurité scrypt/HMAC
+│   ├── models/             # Modèles ORM (User, Speaker, Session, Prompt, Recording, QA, Transcription, TranscriptionReview, AuditLog, ContactMessage…)
 │   ├── schemas/            # DTOs Pydantic v2
 │   ├── services/           # Logique métier (Auth, Audio QA, FFmpeg, MinIO, Rotation Prompts, Praat, Export Speaker-Disjoint)
 │   ├── routers/            # API REST (/api/*, /api/public/*) et pages Web Jinja2
@@ -65,7 +66,7 @@ ALORA/
 │   └── prompts_catalog.csv  # Catalogue versionné avec sources & licences (images/ ignoré par Git)
 ├── static/
 │   ├── css/                 # landing.css, contribute.css, style.css
-│   └── js/                  # contribute.js, recorder.js, offline_queue.js
+│   └── js/                  # contribute.js, recorder.js, offline_queue.js, searchable_select.js
 ├── tests/                   # Suite pytest (E2E, pipeline WAXAL, RBAC & parcours public)
 ├── docker-compose.yml       # PostgreSQL 16 (5434) & MinIO (9000/9001)
 ├── pyproject.toml           # Dépendances et métadonnées gérées par uv

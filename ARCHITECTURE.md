@@ -62,14 +62,14 @@ Utilisez ce tableau pour aller **directement au bon fichier** sans parcourir tou
 | **Contrôle qualité acoustique auto (QA)** | `app/services/audio_qa.py` | Durée exacte, SNR (dB), clipping, ratio vocal, drapeaux (`too_short`, `low_snr`, `clipping`, `silence_only`) |
 | **Catalogue prompts, images & rotation** | `app/services/prompt.py`, `app/routers/api_prompts.py`, `app/templates/prompts.html` | Rotation anti-biais par locuteur + import unitaire ou multi-images |
 | **Seeding initial (72 images + 10 phrases)** | `scripts/fetch_seed_images.py`, `scripts/seed_prompts.py`, `seed_data/prompts_catalog.csv` | Idempotent ; `seed_data/images/` est ignoré par Git |
-| **Locuteurs & consentement vocal** | `app/services/speaker.py`, `app/routers/api_speakers.py`, `app/templates/speakers.html` | Code `SPK_xxxxxx`, upload/écoute du consentement oral stocké sous `consents/` |
-| **Sessions & liste de matériel** | `app/services/session.py`, `app/routers/api_sessions.py`, `app/templates/sessions.html` | Séparation `target_task` (`asr` / `tts`), `source` (`field_agent` / `public_web`), liste fixe de micros |
+| **Locuteurs & consentement vocal** | `app/services/speaker.py`, `app/routers/api_speakers.py`, `app/templates/speakers.html`, `static/js/searchable_select.js` | Code `SPK_xxxxxx`, création 1-clic locuteur+session, préfectures & langues alphabétiques avec recherche intégrée et multi-sélection |
+| **Sessions & liste de matériel** | `app/services/session.py`, `app/routers/api_sessions.py`, `app/templates/sessions.html` | Séparation `target_task` (`asr`/`tts`), `language`, liaison serveur `collector_user_id`, liste fixe de micros |
 | **Validation & Transcription** | `app/services/quality.py`, `app/services/transcription.py`, `app/templates/recording_detail.html`, `app/templates/transcription_editor.html` | Transcriptions versionnées (`v1`, `v2`…) avec **validation multi-pairs** (`transcription_reviews`, quorum `TRANSCRIPTION_REQUIRED_APPROVALS=2`, auto-validation interdite) |
 | **Logs JSON & Journal d'Audit** | `app/core/logging.py`, `app/services/audit.py`, `app/templates/admin_audit.html`, `app/main.py` | Logs JSON structurés (`X-Request-ID`, compatible GCP Cloud Logging) + table `audit_logs` immuable sur `/admin/audit` |
 | **Multi-langues & Signalement Bugs** | `app/core/languages.py`, `app/routers/api_public.py`, `app/templates/base.html`, `app/templates/contribute.html` | Registre ISO 639-3 (`ACTIVE_LANGUAGES`), images partagées `mul`, export `?language=`, modal `Signaler un bug` (public + équipe) & `POST /api/public/client-error` |
 | **Segmentation & Praat `.TextGrid`** | `app/services/segmentation.py`, `app/routers/api_segmentation.py` | Génère des fichiers `.TextGrid` alignés sur les segments et annotations de mots |
 | **Export ML speaker-disjoint (`.ZIP`)** | `app/services/export.py`, `app/routers/api_export.py` | Filtrage validés par défaut, splits `train`/`validation`/`test` sans fuite de locuteur, manifeste JSON + `README_CORPUS.md` |
-| **Authentification, Rôles & Comptes** | `app/core/security.py`, `app/services/auth.py`, `app/templates/login.html`, `app/templates/admin_users.html`, `scripts/create_admin.py` | Hachage `scrypt`, cookies HMAC-SHA256 `HttpOnly`, rôles `collector` / `reviewer` / `admin` |
+| **Authentification, Rôles & Comptes** | `app/core/security.py`, `app/services/auth.py`, `app/templates/login.html`, `app/templates/403.html`, `app/templates/admin_users.html`, `scripts/create_admin.py` | Hachage `scrypt`, cookies HMAC-SHA256 `HttpOnly`, rôles `collector`/`reviewer`/`admin`, page `403` HTML dédiée |
 | **Boîte de réception contact** | `app/templates/admin_messages.html`, `app/routers/web.py` | Accessible dès `reviewer`+ ; bouton marquer comme lu |
 | **Modèles BDD & Migrations** | `app/models/__init__.py`, `migrations/versions/*.py` | Toujours générer une migration Alembic après modification d'un modèle |
 | **Configuration & Variables `.env`** | `app/core/config.py`, `.env.example`, `docker-compose.yml` | Chargé par `pydantic-settings` |
@@ -110,9 +110,11 @@ erDiagram
         string location
         string environment
         string target_task "asr | tts"
+        string language "sus | fuf | ..."
         string source "field_agent | public_web"
         string device
         string collector
+        uuid collector_user_id FK
     }
 
     PROMPTS {

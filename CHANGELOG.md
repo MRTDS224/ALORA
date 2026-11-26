@@ -17,6 +17,8 @@ Historique des principales évolutions de la plateforme **ALORA**.
 
 ### Amélioré
 - **Rotation intelligente des prompts :** équilibrage global (priorité aux images les moins enregistrées avec tirage aléatoire dans le top-6) combiné à la mémoire `localStorage` côté navigateur pour ne jamais reproposer les photos déjà vues ou passées.
+- **UX terrain 1-clic & listes normalisées avec recherche intégrée :** création locuteur + session en 1 clic sur `/speakers`, référentiels alphabétiques complets des 33 préfectures de Guinée + Conakry et des langues de Guinée avec recherche sans accent directement dans les listes déroulantes (`searchable_select.js`), multi-sélection par cases à cocher pour *Autres langues parlées*, et harmonisation canonique `Soussou`.
+- **Sécurité & navigation par rôle :** liaison serveur automatique `collector_user_id` / `reviewer_user_id` (suppression des champs manuels modifiables), validation serveur par listes blanches, journalisation `speaker.create`/`session.create` dans `audit_logs`, lien d'accueil adapté au rôle et page HTML `403` dédiée.
 
 ---
 
