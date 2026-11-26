@@ -386,10 +386,17 @@
     }
     overlay.style.display = "flex";
     return new Promise((resolve) => {
-      setTimeout(() => {
+      let finished = false;
+      function closeThanks() {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        overlay.removeEventListener("click", closeThanks);
         overlay.style.display = "none";
         resolve();
-      }, 1300);
+      }
+      const timer = setTimeout(closeThanks, 5000);
+      overlay.addEventListener("click", closeThanks);
     });
   }
 
