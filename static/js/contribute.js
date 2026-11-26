@@ -374,6 +374,25 @@
     }
   }
 
+  function showThanksOverlay(count) {
+    const overlay = document.getElementById("cbThanksOverlay");
+    const sub = document.getElementById("cbThanksSub");
+    if (!overlay) return Promise.resolve();
+    if (sub) {
+      sub.textContent =
+        count && count > 0
+          ? `Voix enregistrée (${count} photo${count > 1 ? "s" : ""} décrite${count > 1 ? "s" : ""}) · Photo suivante…`
+          : "Voix enregistrée · Photo suivante…";
+    }
+    overlay.style.display = "flex";
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        overlay.style.display = "none";
+        resolve();
+      }, 1300);
+    });
+  }
+
   async function sendRec() {
     if (!audioBlob || durationSec < HARD_MIN_SECONDS) return;
     stopAudioPreview();
@@ -392,6 +411,7 @@
       await refreshOfflineUI();
       btnSend.textContent = "Envoyer et voir la photo suivante →";
       if (pId) markPromptSeen(pId);
+      await showThanksOverlay(0);
       await loadNextPhoto();
       return;
     }
@@ -399,8 +419,10 @@
     try {
       const data = await uploadPublicBlob(audioBlob, pId, durationSec);
       if (pId) markPromptSeen(pId);
-      updateCount(data.completed_count || 0);
+      const totalDone = data.completed_count || 0;
+      updateCount(totalDone);
       btnSend.textContent = "Envoyer et voir la photo suivante →";
+      await showThanksOverlay(totalDone);
       await loadNextPhoto();
       syncOfflinePublic();
     } catch (err) {
@@ -463,6 +485,11 @@
   });
 
   btnChangePerson.addEventListener("click", async () => {
+    const ok = window.confirm(
+      "Changer de personne ?\n\nUtilisez ce bouton uniquement si quelqu'un d'autre prend ce téléphone pour parler. Un nouveau profil anonyme sera créé."
+    );
+    if (!ok) return;
+    stopAudioPreview();
     await fetch("/api/public/reset-profile", { method: "POST" });
     clearPromptSeen();
     stepRecord.style.display = "none";

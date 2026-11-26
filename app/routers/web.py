@@ -89,6 +89,18 @@ def page_contribute(request: Request):
     )
 
 
+@web_router.get("/confidentialite", response_class=HTMLResponse)
+def page_privacy(
+    request: Request,
+    current_user: Optional[User] = Depends(auth_service.get_current_user_optional),
+):
+    return templates.TemplateResponse(
+        request=request,
+        name="privacy.html",
+        context={"current_user": current_user},
+    )
+
+
 # --- AUTHENTICATION ---
 @web_router.get("/login", response_class=HTMLResponse)
 def page_login(

@@ -64,6 +64,7 @@ def test_rbac_access_matrix():
     assert home_res.headers.get("x-content-type-options") == "nosniff"
     assert home_res.headers.get("x-frame-options") == "DENY"
     assert anon.get("/contribuer").status_code == 200
+    assert anon.get("/confidentialite").status_code == 200
     assert anon.get("/login").status_code == 200
     assert anon.get("/dashboard", follow_redirects=False).status_code == 303
     assert anon.get("/record", follow_redirects=False).status_code == 303

@@ -757,3 +757,64 @@ body.cb {
   color: #64748b;
   text-align: center;
 }
+
+/* --- Short animated thank-you overlay after each voice submission --- */
+.cb-thanks-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 26, 43, 0.35);
+  backdrop-filter: blur(2px);
+  animation: cbThanksFadeIn 0.22s ease-out;
+}
+
+.cb-thanks-card {
+  background: #ffffff;
+  border-radius: 22px;
+  padding: 1.7rem 2rem;
+  text-align: center;
+  max-width: 320px;
+  width: calc(100% - 2.5rem);
+  box-shadow: 0 22px 50px rgba(15, 26, 43, 0.28);
+  animation: cbThanksPop 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cb-thanks-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 0.85rem;
+  border-radius: 50%;
+  background: #16a34a;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(22, 163, 74, 0.35);
+}
+
+.cb-thanks-title {
+  margin: 0 0 0.3rem;
+  font-size: 1.28rem;
+  font-weight: 800;
+  color: #0f1a2b;
+}
+
+.cb-thanks-sub {
+  margin: 0;
+  font-size: 0.92rem;
+  color: #475569;
+  font-weight: 500;
+}
+
+@keyframes cbThanksFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes cbThanksPop {
+  from { opacity: 0; transform: scale(0.86) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}

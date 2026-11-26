@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Confidentialité &amp; Conditions de participation — ALORA{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 820px; margin: 1.5rem auto; padding: 2rem;">
+  <div style="margin-bottom: 1.5rem;">
+    <a href="/" style="font-size: 0.9rem; color: var(--primary); text-decoration: none; font-weight: 600;">← Retour à l'accueil</a>
+    <h1 style="margin: 0.6rem 0 0.35rem; font-size: 1.7rem;">Confidentialité &amp; Conditions de participation</h1>
+    <p class="subtitle" style="margin: 0;">Projet open-source ALORA · Dernière mise à jour : 2026</p>
+  </div>
+
+  <section style="margin-bottom: 1.5rem;">
+    <h2 style="font-size: 1.15rem; margin-bottom: 0.45rem;">1. Objet du projet ALORA</h2>
+    <p>
+      <strong>ALORA</strong> (<em>Automatic Learning for Oral Resource-poor African Languages</em>) est un projet personnel open-source de recherche visant à construire des corpus vocaux ouverts et à entraîner de futurs modèles d'intelligence artificielle vocale (reconnaissance de la parole, synthèse vocale) pour les langues africaines peu dotées, en commençant par le <strong>soussou</strong> de Guinée.
+    </p>
+  </section>
+
+  <section style="margin-bottom: 1.5rem;">
+    <h2 style="font-size: 1.15rem; margin-bottom: 0.45rem;">2. Données collectées sur /contribuer (100 % anonyme)</h2>
+    <ul style="padding-left: 1.25rem; line-height: 1.65;">
+      <li><strong>Enregistrements vocaux :</strong> votre description orale des photos présentées.</li>
+      <li><strong>Métadonnées anonymes :</strong> genre, tranche d'âge, préfecture/ville et statut de langue maternelle, indispensables pour équilibrer les futurs modèles d'IA.</li>
+      <li><strong>Ce que nous ne collectons PAS :</strong> aucun nom, aucun prénom, aucun numéro de téléphone, aucune adresse e-mail et aucune géolocalisation GPS ne sont demandés pour participer sur <code>/contribuer</code>.</li>
+    </ul>
+  </section>
+
+  <section style="margin-bottom: 1.5rem;">
+    <h2 style="font-size: 1.15rem; margin-bottom: 0.45rem;">3. Licence ouverte (CC BY 4.0) &amp; utilisation</h2>
+    <p>
+      En envoyant un enregistrement vocal sur ALORA, vous acceptez qu'il soit intégré au corpus ouvert ALORA sous licence
+      <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer"><strong>Creative Commons Attribution 4.0 (CC BY 4.0)</strong></a>.
+      Ces données servent exclusivement à la recherche scientifique, à la préservation linguistique et à l'entraînement de modèles d'IA vocale ouverts.
+      Merci de ne pas prononcer de noms propres, numéros de téléphone ou informations personnelles dans vos enregistrements.
+    </p>
+  </section>
+
+  <section style="margin-bottom: 1.5rem;">
+    <h2 style="font-size: 1.15rem; margin-bottom: 0.45rem;">4. Cookies &amp; sécurité</h2>
+    <ul style="padding-left: 1.25rem; line-height: 1.65;">
+      <li><strong>Cookie technique uniquement :</strong> un seul cookie signé (<code>alora_contributor</code>, valable 30 jours) permet de ne pas vous reproposer les mêmes photos et de regrouper vos prises sous le même identifiant anonyme (<code>SPK_xxxxxx</code>).</li>
+      <li><strong>Aucun traceur publicitaire :</strong> ALORA n'utilise ni publicité, ni cookie tiers de suivi.</li>
+      <li><strong>Sécurité :</strong> les échanges sont chiffrés en HTTPS et les fichiers audio sont stockés sur un espace privé contrôlé.</li>
+    </ul>
+  </section>
+
+  <section style="margin-bottom: 1.5rem;">
+    <h2 style="font-size: 1.15rem; margin-bottom: 0.45rem;">5. Vos droits &amp; contact</h2>
+    <p>
+      Vous participez librement et pouvez arrêter à tout moment. Pour toute question, remarque ou demande de retrait d'un enregistrement, contactez le responsable du projet :
+      <a href="mailto:mrtdsow@outlook.com">mrtdsow@outlook.com</a> ou via le <a href="/#contact">formulaire de contact</a>.
+    </p>
+  </section>
+
+  <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; padding-top: 0.75rem; border-top: 1px solid var(--neutral-200);">
+    <a href="/contribuer" class="btn btn-primary">Prêter ma voix</a>
+    <a href="/" class="btn btn-secondary">Retour à l'accueil</a>
+  </div>
+</div>
+{% endblock %}

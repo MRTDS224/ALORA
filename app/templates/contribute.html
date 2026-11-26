@@ -146,7 +146,8 @@
         <label class="cb-consent">
           <input type="checkbox" id="cbConsent" checked required>
           <span>
-            J'accepte que ma voix soit enregistrée <strong>de façon anonyme</strong> pour créer des ressources libres pour la langue soussou.
+            J'accepte que ma voix soit enregistrée <strong>de façon anonyme</strong> pour créer des ressources libres pour la langue soussou
+            (<a href="/confidentialite" target="_blank" rel="noopener noreferrer" style="color: #0f1a2b; text-decoration: underline;">Confidentialité &amp; Conditions</a>).
           </span>
         </label>
 
@@ -278,6 +279,19 @@
       </button>
     </div>
   </main>
+
+  <!-- Micro-animation de remerciement après chaque envoi -->
+  <div id="cbThanksOverlay" class="cb-thanks-overlay" role="status" aria-live="polite" style="display: none;">
+    <div class="cb-thanks-card">
+      <div class="cb-thanks-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </div>
+      <p class="cb-thanks-title">I nu wali ! Merci !</p>
+      <p id="cbThanksSub" class="cb-thanks-sub">Voix enregistrée · Photo suivante…</p>
+    </div>
+  </div>
 
   <!-- Modal léger de signalement de bug (sans quitter la session) -->
   <dialog id="cbBugDialog" style="border: none; border-radius: 16px; padding: 1.4rem; max-width: 420px; width: calc(100% - 2rem); box-shadow: 0 20px 50px rgba(15, 26, 43, 0.3);">
