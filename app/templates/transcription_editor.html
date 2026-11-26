@@ -6,23 +6,31 @@
 <div class="page-header">
   <div>
     <h1 class="page-title">Studio de Transcription : {{ recording.recording_code }}</h1>
-    <p class="subtitle">Saisie orthographique, contrôle audio &amp; historisation des versions</p>
+    <p class="subtitle">Saisie orthographique soussou &amp; validation par les pairs ({{ required_approvals }} approbations requises par des réviseurs distincts)</p>
   </div>
   <div class="page-actions">
     <a href="/transcriptions" class="btn btn-secondary">← Liste des Transcriptions</a>
   </div>
 </div>
 
+{% if msg %}
+<div class="alert alert-success" role="status">{{ msg }}</div>
+{% endif %}
+{% if error %}
+<div class="alert alert-danger" role="alert">{{ error }}</div>
+{% endif %}
+
 <div class="form-grid">
-  <!-- Lecteur Audio & Prompt de Référence -->
+  <!-- Colonne 1 : Lecteur Audio & Prompt de Référence -->
   <div class="card">
-    <h3 style="margin-bottom: 1rem;">1. Écoute Audio & Référence</h3>
+    <h3 style="margin-bottom: 1rem;">1. Écoute Audio &amp; Référence</h3>
 
     <div style="background: var(--neutral-900); color: white; padding: 1.5rem; border-radius: 8px; text-align: center; margin-bottom: 1.5rem;">
       <audio src="/api/recordings/{{ recording.id }}/stream" controls style="width: 100%; margin-bottom: 0.5rem;"></audio>
       <div style="font-size: 0.85rem; color: var(--neutral-300);">
-        Locuteur : <strong>{{ recording.session.speaker.speaker_code if recording.session and recording.session.speaker else '-' }}</strong> • 
-        Durée : <strong>{{ recording.duration_seconds|round(2) if recording.duration_seconds else '-' }}s</strong>
+        Locuteur : <strong>{{ recording.session.speaker.speaker_code if recording.session and recording.session.speaker else '-' }}</strong> •
+        Durée : <strong>{{ recording.duration_seconds|round(2) if recording.duration_seconds else '-' }}s</strong> •
+        Statut : <strong>{{ recording.recording_status }}</strong>
       </div>
     </div>
 
@@ -30,7 +38,10 @@
     <div style="background: var(--primary-light); border: 1px solid var(--neutral-300); padding: 1.25rem; border-radius: 8px; margin-bottom: 1rem;">
       <span class="badge badge-uploaded" style="margin-bottom: 0.5rem;">Prompt de Référence [{{ recording.prompt.prompt_code }}]</span>
       <h4 style="color: var(--primary); margin-bottom: 0.5rem;">{{ recording.prompt.title }}</h4>
-      <p style="font-size: 1.15rem; font-weight: 700; color: var(--neutral-900); font-style: italic; margin-bottom: 0.5rem;">
+      {% if recording.prompt.media_object_key %}
+      <img src="/api/prompts/{{ recording.prompt.id }}/media" alt="{{ recording.prompt.title }}" style="max-width: 100%; max-height: 220px; border-radius: 8px; margin-bottom: 0.75rem; object-fit: contain; display: block;">
+      {% endif %}
+      <p style="font-size: 1.05rem; font-weight: 700; color: var(--neutral-900); font-style: italic; margin-bottom: 0.5rem;">
         « {{ recording.prompt.content }} »
       </p>
       {% if recording.prompt.description %}
@@ -44,49 +55,112 @@
     {% endif %}
   </div>
 
-  <!-- Editeur de Transcription -->
+  <!-- Colonne 2 : Validation par les pairs & Nouvelle version -->
   <div class="card">
-    <h3 style="margin-bottom: 1rem;">2. Saisie de la Transcription</h3>
+    {% if latest_transcription %}
+    <div style="margin-bottom: 1.75rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--neutral-200);">
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
+        <h3 style="margin: 0;">2. Validation de la Version v{{ latest_transcription.version }}</h3>
+        <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+          <span class="badge badge-{{ latest_transcription.transcription_status }}">{{ latest_transcription.transcription_status }}</span>
+          <span class="badge {% if latest_approvals >= required_approvals %}badge-validated{% else %}badge-validating{% endif %}">
+            Validations : {{ latest_approvals }} / {{ required_approvals }}
+          </span>
+        </div>
+      </div>
 
+      <div style="background: var(--neutral-100); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+        <p style="font-size: 1.1rem; font-weight: 600; color: var(--neutral-900); margin: 0 0 0.4rem;">
+          « {{ latest_transcription.text }} »
+        </p>
+        <div style="font-size: 0.82rem; color: var(--neutral-600);">
+          Auteur : <strong>{{ latest_transcription.transcriber or 'Anonyme' }}</strong> •
+          Le {{ latest_transcription.created_at.strftime('%d/%m/%Y %H:%M') }}
+          {% if latest_transcription.notes %}<br>Note : {{ latest_transcription.notes }}{% endif %}
+        </div>
+      </div>
+
+      {% if is_latest_author %}
+      <div class="alert alert-warning" style="margin-bottom: 1rem;">
+        Vous êtes l'auteur de la version <strong>v{{ latest_transcription.version }}</strong> : un autre réviseur doit la valider (auto-validation interdite).
+      </div>
+      {% elif user_already_reviewed %}
+      <div class="alert alert-info" style="margin-bottom: 1rem;">
+        Vous avez déjà soumis votre évaluation sur la version <strong>v{{ latest_transcription.version }}</strong>.
+      </div>
+      {% else %}
+      <form action="/transcriptions/{{ recording.id }}/versions/{{ latest_transcription.id }}/review" method="POST" style="margin-bottom: 1rem;">
+        <input type="hidden" name="decision" value="approved">
+        <div class="form-group" style="margin-bottom: 0.65rem;">
+          <label for="approve_comment">Commentaire de validation (optionnel)</label>
+          <input type="text" id="approve_comment" name="comment" class="form-control" placeholder="ex: Orthographe et écoute conformes">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">
+          ✓ Approuver la version v{{ latest_transcription.version }} ({{ latest_approvals + 1 }}/{{ required_approvals }})
+        </button>
+      </form>
+
+      <details style="background: #fff8eb; border: 1px solid #f0d9a7; border-radius: 8px; padding: 0.85rem;">
+        <summary style="cursor: pointer; font-weight: 700; color: var(--neutral-900);">
+          ✎ Proposer une version corrigée (crée v{{ latest_transcription.version + 1 }})
+        </summary>
+        <form action="/transcriptions/{{ recording.id }}/versions/{{ latest_transcription.id }}/review" method="POST" style="margin-top: 0.85rem;">
+          <input type="hidden" name="decision" value="changes_requested">
+          <div class="form-group">
+            <label for="corrected_text">Texte corrigé en soussou *</label>
+            <textarea id="corrected_text" name="corrected_text" class="form-control" rows="3" required>{{ latest_transcription.text }}</textarea>
+          </div>
+          <div class="form-group">
+            <label for="corr_comment">Motif de la correction (optionnel)</label>
+            <input type="text" id="corr_comment" name="comment" class="form-control" placeholder="ex: Correction d'un mot mal entendu">
+          </div>
+          <button type="submit" class="btn btn-accent" style="width: 100%;">
+            Enregistrer la correction (sera validée par un autre réviseur)
+          </button>
+        </form>
+      </details>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Création manuelle d'une nouvelle version brouillon -->
+    <h3 style="margin-bottom: 0.75rem;">
+      {% if latest_transcription %}3. Saisir une nouvelle version (brouillon){% else %}2. Première Transcription (v1){% endif %}
+    </h3>
     <form action="/transcriptions/{{ recording.id }}" method="POST">
       <div class="form-group">
-        <label for="transcription_text">Texte en Langue Susu *</label>
-        <textarea id="transcription_text" name="transcription_text" class="form-control" style="min-height: 140px; font-size: 1.1rem; line-height: 1.6;" placeholder="Saisir la transcription exacte en Susu..." required>{% if latest_transcription %}{{ latest_transcription.text }}{% elif recording.prompt %}{{ recording.prompt.content }}{% endif %}</textarea>
+        <label for="transcription_text">Texte en Langue Soussou *</label>
+        <textarea id="transcription_text" name="transcription_text" class="form-control" style="min-height: 120px; font-size: 1.05rem; line-height: 1.6;" placeholder="Saisir la transcription exacte en soussou..." required>{% if latest_transcription %}{{ latest_transcription.text }}{% elif recording.prompt and recording.prompt.prompt_type == 'sentence' %}{{ recording.prompt.content }}{% endif %}</textarea>
       </div>
 
       <div class="form-group">
-        <label for="transcriber">Transcripteur / Annotateur</label>
-        <input type="text" id="transcriber" name="transcriber" class="form-control" placeholder="Nom ou ID du transcripteur" value="{{ latest_transcription.transcriber if latest_transcription else '' }}">
-      </div>
-
-      <div class="form-group">
-        <label for="status">Statut de la version</label>
-        <select id="status" name="status" class="form-control">
-          <option value="draft">Brouillon (Draft)</option>
-          <option value="reviewed">Revu (Reviewed)</option>
-          <option value="accepted">Validé & Accepté (Accepted)</option>
-        </select>
+        <label for="transcriber">Transcripteur</label>
+        <input type="text" id="transcriber" name="transcriber" class="form-control" value="{{ current_user.full_name if current_user else '' }}">
       </div>
 
       <div class="form-group">
         <label for="notes">Notes / Difficultés de transcription</label>
-        <textarea id="notes" name="notes" class="form-control" placeholder="Mot inaudible, variante dialectale, hésitation..."></textarea>
+        <textarea id="notes" name="notes" class="form-control" rows="2" placeholder="Mot inaudible, variante dialectale, hésitation..."></textarea>
       </div>
 
-      <button type="submit" class="btn btn-primary" style="width: 100%; font-size: 1rem; padding: 0.75rem;">
-        💾 Enregistrer la Version (Auto-Incrément Version)
+      <button type="submit" class="btn btn-secondary" style="width: 100%;">
+        Enregistrer en brouillon (v{{ (latest_transcription.version + 1) if latest_transcription else 1 }})
       </button>
     </form>
 
-    <!-- Historique des versions de transcription -->
+    <!-- Historique complet des versions et validations -->
     {% if transcriptions %}
     <div style="margin-top: 2rem; border-top: 1px solid var(--neutral-200); padding-top: 1rem;">
       <h4 style="margin-bottom: 0.75rem;">Historique des Versions ({{ transcriptions|length }}) :</h4>
       {% for t in transcriptions %}
+      {% set t_approvals = t.reviews | selectattr('decision', 'equalto', 'approved') | list | length %}
       <div style="background: white; border: 1px solid var(--neutral-200); border-radius: 6px; padding: 0.85rem; margin-bottom: 0.75rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; flex-wrap: wrap; gap: 0.35rem;">
           <strong>Version {{ t.version }}</strong>
-          <span class="badge badge-{{ t.transcription_status }}">{{ t.transcription_status }}</span>
+          <div>
+            <span class="badge badge-{{ t.transcription_status }}">{{ t.transcription_status }}</span>
+            <span class="badge badge-validating">{{ t_approvals }}/{{ required_approvals }} valid.</span>
+          </div>
         </div>
         <p style="font-style: italic; font-size: 1rem; color: var(--neutral-900); margin-bottom: 0.4rem;">
           « {{ t.text }} »
@@ -94,6 +168,21 @@
         <div style="font-size: 0.8rem; color: var(--neutral-600);">
           Par {{ t.transcriber or 'Anonyme' }} • Le {{ t.created_at.strftime('%d/%m/%Y %H:%M') }}
         </div>
+        {% if t.reviews %}
+        <ul style="margin: 0.5rem 0 0; padding-left: 1.1rem; font-size: 0.82rem; color: var(--neutral-700);">
+          {% for rv in t.reviews %}
+          <li>
+            <strong>{{ rv.reviewer_name or 'Réviseur' }}</strong> :
+            {% if rv.decision == 'approved' %}
+              <span style="color: #15803d; font-weight: 600;">Approuvé</span>
+            {% else %}
+              <span style="color: #b45309; font-weight: 600;">Correction proposée</span>
+            {% endif %}
+            {% if rv.comment %} — {{ rv.comment }}{% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
       </div>
       {% endfor %}
     </div>

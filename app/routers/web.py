@@ -738,6 +738,8 @@ def page_transcriptions(
 def page_transcription_editor(
     request: Request,
     recording_id: str,
+    msg: Optional[str] = None,
+    error: Optional[str] = None,
     current_user: User = Depends(auth_service.require_web_roles(*REVIEWER_ROLES)),
     db: Session = Depends(get_db),
 ):
@@ -751,6 +753,15 @@ def page_transcription_editor(
     transcriptions = transcription_service.get_transcriptions_by_recording(db, rec_uuid)
     latest_transcription = transcriptions[0] if transcriptions else None
 
+    required_approvals = max(1, int(settings.TRANSCRIPTION_REQUIRED_APPROVALS or 2))
+    latest_approvals = 0
+    user_already_reviewed = False
+    is_latest_author = False
+    if latest_transcription:
+        latest_approvals = sum(1 for r in latest_transcription.reviews if r.decision == "approved")
+        user_already_reviewed = any(r.reviewer_user_id == current_user.id for r in latest_transcription.reviews)
+        is_latest_author = bool(latest_transcription.author_user_id and latest_transcription.author_user_id == current_user.id)
+
     return templates.TemplateResponse(
         request=request,
         name="transcription_editor.html",
@@ -758,6 +769,12 @@ def page_transcription_editor(
             "recording": rec,
             "transcriptions": transcriptions,
             "latest_transcription": latest_transcription,
+            "latest_approvals": latest_approvals,
+            "required_approvals": required_approvals,
+            "user_already_reviewed": user_already_reviewed,
+            "is_latest_author": is_latest_author,
+            "msg": msg,
+            "error": error,
             "current_user": current_user,
         },
     )
@@ -765,14 +782,15 @@ def page_transcription_editor(
 
 @web_router.post("/transcriptions/{recording_id}")
 def handle_save_transcription(
+    request: Request,
     recording_id: str,
     transcription_text: str = Form(...),
     transcriber: Optional[str] = Form(None),
-    status: str = Form("draft"),
     notes: Optional[str] = Form(None),
     current_user: User = Depends(auth_service.require_web_roles(*REVIEWER_ROLES)),
     db: Session = Depends(get_db),
 ):
+    from urllib.parse import quote as url_quote
     from app.schemas.transcription import TranscriptionCreate
     from app.services import transcription as transcription_service
 
@@ -782,11 +800,78 @@ def handle_save_transcription(
         transcription_text=transcription_text,
         transcriber=transcriber or current_user.full_name,
         language_code="sus",
-        status=status,
+        status="draft",
         notes=notes,
     )
-    transcription_service.create_transcription(db, t_in)
-    return RedirectResponse(url=f"/transcriptions/{recording_id}", status_code=303)
+    created = transcription_service.create_transcription(db, t_in, author=current_user)
+    audit_service.record_audit(
+        db=db,
+        action="transcription.create",
+        actor=current_user,
+        target_type="transcription",
+        target_id=created.id,
+        details={"recording_id": recording_id, "version": created.version},
+        ip_address=get_client_ip(request),
+    )
+    ok_msg = url_quote(f"Version v{created.version} enregistrée (en attente de validation par un autre réviseur).")
+    return RedirectResponse(url=f"/transcriptions/{recording_id}?msg={ok_msg}", status_code=303)
+
+
+@web_router.post("/transcriptions/{recording_id}/versions/{transcription_id}/review")
+def handle_review_transcription(
+    request: Request,
+    recording_id: str,
+    transcription_id: UUID,
+    decision: str = Form(...),
+    comment: Optional[str] = Form(None),
+    corrected_text: Optional[str] = Form(None),
+    current_user: User = Depends(auth_service.require_web_roles(*REVIEWER_ROLES)),
+    db: Session = Depends(get_db),
+):
+    from urllib.parse import quote as url_quote
+    from app.services import transcription as transcription_service
+
+    try:
+        res = transcription_service.review_transcription(
+            db=db,
+            transcription_id=transcription_id,
+            reviewer=current_user,
+            decision=decision,
+            comment=comment,
+            corrected_text=corrected_text,
+        )
+    except (LookupError, PermissionError, ValueError) as e:
+        return RedirectResponse(
+            url=f"/transcriptions/{recording_id}?error={url_quote(str(e))}",
+            status_code=303,
+        )
+
+    audit_action = (
+        "transcription.approve" if decision == "approved" else "transcription.propose_correction"
+    )
+    audit_service.record_audit(
+        db=db,
+        action=audit_action,
+        actor=current_user,
+        target_type="transcription",
+        target_id=transcription_id,
+        details={
+            "recording_id": recording_id,
+            "approvals_count": res["approvals_count"],
+            "required_approvals": res["required_approvals"],
+            "created_version": res["created_version"].version if res["created_version"] else None,
+        },
+        ip_address=get_client_ip(request),
+    )
+
+    if res["created_version"]:
+        info = f"Version corrigée v{res['created_version'].version} créée ! Elle devra être validée par un autre utilisateur."
+    elif res["transcription"].transcription_status == "accepted":
+        info = f"Version v{res['transcription'].version} acceptée ({res['approvals_count']}/{res['required_approvals']} validations atteintes) !"
+    else:
+        info = f"Validation enregistrée ({res['approvals_count']}/{res['required_approvals']} approbations)."
+
+    return RedirectResponse(url=f"/transcriptions/{recording_id}?msg={url_quote(info)}", status_code=303)
 
 
 # --- RECORD / COLLECTE AGENT (COLLECTOR+) ---
