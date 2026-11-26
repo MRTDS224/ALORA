@@ -147,13 +147,26 @@
     cbTimer.classList.toggle("active", mode === "recording");
   }
 
+  function stopAudioPreview() {
+    if (!audioPreview) return;
+    try {
+      audioPreview.pause();
+      audioPreview.currentTime = 0;
+    } catch (_) {}
+  }
+
   function resetTake() {
+    stopAudioPreview();
     audioChunks = [];
     audioBlob = null;
     durationSec = 0;
     cbTimer.textContent = "00:00";
     updateGauge(0);
+    if (audioPreview.src && audioPreview.src.startsWith("blob:")) {
+      try { URL.revokeObjectURL(audioPreview.src); } catch (_) {}
+    }
     audioPreview.removeAttribute("src");
+    audioPreview.load();
     reviewMsg.style.display = "none";
     feedbackMsg.style.display = "none";
     setUiState("idle");
@@ -363,6 +376,7 @@
 
   async function sendRec() {
     if (!audioBlob || durationSec < HARD_MIN_SECONDS) return;
+    stopAudioPreview();
     btnSend.disabled = true;
     btnSend.textContent = "Envoi en cours…";
 

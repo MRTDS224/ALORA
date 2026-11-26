@@ -328,7 +328,17 @@
     }
     if (recorderBox) recorderBox.classList.remove("is-recording");
     if (audioPreviewWrap) audioPreviewWrap.style.display = "none";
-    if (audioPreview) audioPreview.removeAttribute("src");
+    if (audioPreview) {
+      try {
+        audioPreview.pause();
+        audioPreview.currentTime = 0;
+      } catch (_) {}
+      if (audioPreview.src && audioPreview.src.startsWith("blob:")) {
+        try { URL.revokeObjectURL(audioPreview.src); } catch (_) {}
+      }
+      audioPreview.removeAttribute("src");
+      audioPreview.load();
+    }
     if (btnUpload) btnUpload.disabled = true;
     if (btnRetake) btnRetake.style.display = "none";
     if (statusMsg) statusMsg.innerHTML = "";

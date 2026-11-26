@@ -6,6 +6,12 @@ from app.models import Speaker, Session as SessionModel, Prompt, Recording, Tran
 
 def get_dashboard_stats(db: Session) -> Dict[str, Any]:
     total_speakers = db.query(func.count(Speaker.id)).scalar() or 0
+    active_speakers = (
+        db.query(func.count(func.distinct(SessionModel.speaker_id)))
+        .join(Recording, Recording.session_id == SessionModel.id)
+        .scalar()
+        or 0
+    )
     total_sessions = db.query(func.count(SessionModel.id)).scalar() or 0
     total_prompts = db.query(func.count(Prompt.id)).scalar() or 0
     image_prompts = (
@@ -46,6 +52,7 @@ def get_dashboard_stats(db: Session) -> Dict[str, Any]:
 
     return {
         "total_speakers": total_speakers,
+        "active_speakers": active_speakers,
         "total_sessions": total_sessions,
         "total_prompts": total_prompts,
         "image_prompts": image_prompts,
