@@ -13,7 +13,12 @@ from app.core.config import settings
 from app.core.database import SessionLocal
 from app.core.logging import configure_logging, get_logger
 from app.core.security import get_client_ip
-from app.services.auth import WebAuthRedirect, ensure_default_admin
+from app.services.auth import (
+    WebAuthRedirect,
+    WebForbiddenError,
+    default_home_for_user,
+    ensure_default_admin,
+)
 from app.services.storage import storage_service
 
 configure_logging()
@@ -26,7 +31,7 @@ from app.routers.api_transcriptions import router as api_transcriptions_router
 from app.routers.api_segmentation import router as api_segmentation_router
 from app.routers.api_export import router as api_export_router
 from app.routers.api_public import router as api_public_router
-from app.routers.web import web_router
+from app.routers.web import templates as web_templates, web_router
 
 
 @asynccontextmanager
@@ -56,6 +61,20 @@ app = FastAPI(
 async def web_auth_redirect_handler(request: Request, exc: WebAuthRedirect):
     safe_next = quote(exc.next_url or "/dashboard", safe="/?=&")
     return RedirectResponse(url=f"/login?next={safe_next}", status_code=303)
+
+
+@app.exception_handler(WebForbiddenError)
+async def web_forbidden_handler(request: Request, exc: WebForbiddenError):
+    return web_templates.TemplateResponse(
+        request=request,
+        name="403.html",
+        context={
+            "current_user": exc.user,
+            "detail": exc.detail,
+            "home_url": default_home_for_user(exc.user),
+        },
+        status_code=403,
+    )
 
 
 @app.middleware("http")

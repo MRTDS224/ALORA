@@ -60,6 +60,7 @@ def test_rbac_access_matrix():
     anon = TestClient(app)
     home_res = anon.get("/")
     assert home_res.status_code == 200
+    assert 'href="/login"' in home_res.text
     assert home_res.headers.get("x-content-type-options") == "nosniff"
     assert home_res.headers.get("x-frame-options") == "DENY"
     assert anon.get("/contribuer").status_code == 200
@@ -75,16 +76,24 @@ def test_rbac_access_matrix():
     col = TestClient(app)
     assert col.post("/login", data={"email": col_email, "password": ephemeral_cred}, follow_redirects=False).status_code == 303
     assert col.get("/record").status_code == 200
+    col_home = col.get("/")
+    assert col_home.status_code == 200
+    assert 'href="/record"' in col_home.text
     assert col.get("/prompts").status_code == 200
     assert col.get("/speakers").status_code == 200
     assert col.get("/sessions").status_code == 200
-    assert col.get("/dashboard").status_code == 403
+    col_dash = col.get("/dashboard")
+    assert col_dash.status_code == 403
+    assert "text/html" in col_dash.headers.get("content-type", "")
+    assert "Retourner à mon espace" in col_dash.text
+    assert 'href="/record"' in col_dash.text
     assert col.get("/admin/users").status_code == 403
     assert col.get("/api/export/corpus").status_code == 403
 
     # 3. Reviewer: can access /dashboard, /recordings, /transcriptions, NOT /admin/users or export
     rev = TestClient(app)
     assert rev.post("/login", data={"email": rev_email, "password": ephemeral_cred}, follow_redirects=False).status_code == 303
+    assert 'href="/dashboard"' in rev.get("/").text
     assert rev.get("/dashboard").status_code == 200
     assert rev.get("/recordings").status_code == 200
     assert rev.get("/transcriptions").status_code == 200

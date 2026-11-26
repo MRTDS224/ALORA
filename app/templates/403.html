@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Accès restreint — ALORA{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 560px; margin: 2.5rem auto; text-align: center; padding: 2.2rem 1.8rem;">
+  <div style="font-size: 2.2rem; margin-bottom: 0.6rem;" aria-hidden="true">🔒</div>
+  <h1 style="margin: 0 0 0.5rem; font-size: 1.5rem;">Accès restreint</h1>
+  <p class="subtitle" style="margin: 0 0 1rem;">
+    {{ detail or "Cette page est réservée à un rôle supérieur." }}
+  </p>
+  {% if current_user %}
+  <p style="font-size: 0.9rem; color: var(--text-muted); margin: 0 0 1.5rem;">
+    Vous êtes connecté en tant que <strong>{{ current_user.full_name }}</strong>
+    (rôle : <code>{{ current_user.role }}</code>).
+  </p>
+  {% endif %}
+  <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+    <a href="{{ home_url or '/record' }}" class="btn btn-primary">Retourner à mon espace</a>
+    {% if current_user %}
+    <form action="/logout" method="POST" style="display: inline;">
+      <button type="submit" class="btn btn-secondary">Changer de compte</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

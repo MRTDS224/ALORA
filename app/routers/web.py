@@ -54,8 +54,18 @@ ADMIN_ROLES = ("admin",)
 
 # --- PUBLIC PAGES ---
 @web_router.get("/", response_class=HTMLResponse)
-def page_home(request: Request):
-    return templates.TemplateResponse(request=request, name="home.html", context={})
+def page_home(
+    request: Request,
+    current_user: Optional[User] = Depends(auth_service.get_current_user_optional),
+):
+    return templates.TemplateResponse(
+        request=request,
+        name="home.html",
+        context={
+            "current_user": current_user,
+            "platform_url": auth_service.default_home_for_user(current_user),
+        },
+    )
 
 
 @web_router.get("/contribuer", response_class=HTMLResponse)

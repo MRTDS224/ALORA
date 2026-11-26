@@ -22,6 +22,21 @@ class WebAuthRedirect(Exception):
         self.next_url = next_url
 
 
+class WebForbiddenError(Exception):
+    """Raised on protected HTML pages when an authenticated user lacks the required role."""
+
+    def __init__(self, user: User, detail: str = "Accès réservé à un rôle supérieur."):
+        self.user = user
+        self.detail = detail
+
+
+def default_home_for_user(user: Optional[User]) -> str:
+    """Return the role-appropriate landing page inside the platform."""
+    if not user:
+        return "/login"
+    return "/record" if user.role == "collector" else "/dashboard"
+
+
 def get_user_by_email(db: Session, email: str) -> Optional[User]:
     return db.query(User).filter(User.email == email.strip().lower()).first()
 
@@ -147,8 +162,8 @@ def require_web_roles(*allowed_roles: str):
                 next_path = f"{next_path}?{request.url.query}"
             raise WebAuthRedirect(next_url=next_path)
         if allowed_roles and user.role not in allowed_roles:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
+            raise WebForbiddenError(
+                user=user,
                 detail="Accès réservé à un rôle supérieur.",
             )
         return user
