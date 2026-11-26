@@ -121,10 +121,10 @@
         </fieldset>
 
         <div class="cb-field">
-          <label for="cbRegion">Votre région ou ville</label>
-          <select id="cbRegion" name="region" class="cb-select">
+          <label for="cbRegion">Votre préfecture ou ville</label>
+          <select id="cbRegion" name="region" class="cb-select" data-searchable data-search-placeholder="Rechercher une ville (ex: Conakry, Kindia, Boké)…">
             {% for r in regions %}
-            <option value="{{ r }}">{% if r == 'Autre' %}Autre région / Diaspora{% else %}{{ r }}{% endif %}</option>
+            <option value="{{ r }}" {% if r == 'Conakry' %}selected{% endif %}>{% if r == 'Autre' %}Autre / Diaspora{% else %}{{ r }}{% endif %}</option>
             {% endfor %}
           </select>
         </div>
@@ -296,6 +296,7 @@
     </form>
   </dialog>
 
+  <script src="{{ static_url('js/searchable_select.js') }}"></script>
   <script src="{{ static_url('js/offline_queue.js') }}"></script>
   <script src="{{ static_url('js/contribute.js') }}"></script>
 </body>

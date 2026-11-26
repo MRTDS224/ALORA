@@ -35,26 +35,41 @@
         </div>
       </div>
       <div class="form-group">
-        <label for="region">Région ou ville *</label>
-        <select id="region" name="region" class="form-control">
+        <label for="region">Préfecture / Ville *</label>
+        <select id="region" name="region" class="form-control" data-searchable data-search-placeholder="Rechercher une préfecture (ex: Boké, Kankan, Kindia)…">
           {% for r in regions %}
           <option value="{{ r }}" {% if r == default_region %}selected{% endif %}>
-            {% if r == 'Autre' %}Autre région / Diaspora{% else %}{{ r }}{% endif %}
+            {% if r == 'Autre' %}Autre / Diaspora{% else %}{{ r }}{% endif %}
           </option>
           {% endfor %}
         </select>
       </div>
       <div class="form-group">
         <label for="native_language">Langue maternelle *</label>
-        <select id="native_language" name="native_language" class="form-control">
+        <select id="native_language" name="native_language" class="form-control" data-searchable data-search-placeholder="Rechercher une langue…">
           {% for lang in native_languages %}
           <option value="{{ lang }}" {% if lang == 'Soussou' %}selected{% endif %}>{{ lang }}</option>
           {% endfor %}
         </select>
       </div>
       <div class="form-group">
-        <label for="other_languages">Autres langues parlées (optionnel)</label>
-        <input type="text" id="other_languages" name="other_languages" class="form-control" maxlength="200" placeholder="ex: Français, Pular">
+        <label>Autres langues parlées (optionnel)</label>
+        <details class="multi-select" data-placeholder="Sélectionner une ou plusieurs langues…">
+          <summary class="multi-select-summary">
+            <span class="multi-select-summary-text is-placeholder">Sélectionner une ou plusieurs langues…</span>
+          </summary>
+          <div class="multi-select-panel">
+            <input type="search" class="multi-select-search" placeholder="Filtrer les langues…" aria-label="Filtrer les autres langues" autocomplete="off">
+            <div class="multi-select-list">
+              {% for lang in native_languages %}
+              <label class="multi-select-option">
+                <input type="checkbox" name="other_languages" value="{{ lang }}">
+                <span>{{ lang }}</span>
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+        </details>
       </div>
       <div class="form-group">
         <label for="consent_status">Statut de consentement</label>
@@ -96,7 +111,12 @@
           {% for s in speakers %}
           <tr>
             <td><strong>{{ s.speaker_code }}</strong></td>
-            <td>{{ s.age_group }} · {{ s.gender }}<br><small style="color: var(--neutral-600);">{{ s.native_language }}</small></td>
+            <td>
+              {{ s.age_group }} · {{ s.gender }}<br>
+              <small style="color: var(--neutral-600);">
+                {{ s.native_language }}{% if s.other_languages %} · + {{ s.other_languages }}{% endif %}
+              </small>
+            </td>
             <td>{{ s.region or '-' }}</td>
             <td>
               <span class="badge {% if s.consent_status == 'granted' %}badge-validated{% else %}badge-validating{% endif %}">
@@ -162,6 +182,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<script src="{{ static_url('js/searchable_select.js') }}"></script>
 <script>
   (function () {
     const dialog = document.getElementById("consentDialog");

@@ -466,7 +466,15 @@ def test_field_ux_one_click_collect_security_and_consistency():
     col = TestClient(app)
     assert col.post("/login", data={"email": col_email, "password": cred}, follow_redirects=False).status_code == 303
 
-    # 1. One-click "save_and_collect" on /speakers + allowlist validation on forged inputs
+    # 0. Verify full alphabetical prefectures (33 + Conakry + Autre) and languages registries
+    from app.core.languages import GUINEA_REGIONS, NATIVE_LANGUAGES
+    assert len(GUINEA_REGIONS) == 35  # 33 prefectures + Conakry + Autre
+    assert GUINEA_REGIONS[-1] == "Autre"
+    assert NATIVE_LANGUAGES[-1] == "Autre"
+    assert "Nzérékoré" in GUINEA_REGIONS and "Conakry" in GUINEA_REGIONS
+    assert "Soussou" in NATIVE_LANGUAGES and "Pular" in NATIVE_LANGUAGES
+
+    # 1. One-click "save_and_collect" on /speakers + allowlist validation on forged inputs & multi-select other_languages
     resp = col.post(
         "/speakers",
         data={
@@ -474,7 +482,7 @@ def test_field_ux_one_click_collect_security_and_consistency():
             "gender": "male",
             "region": "Injected<script>",
             "native_language": "InvalidLang",
-            "other_languages": "  Français, Pular  ",
+            "other_languages": ["Pular", "Français", "InjectedXSS"],
             "consent_status": "granted",
             "action": "save_and_collect",
         },

@@ -46,11 +46,11 @@
       </div>
 
       <div class="form-group">
-        <label for="location">Région ou ville de la collecte *</label>
-        <select id="location" name="location" class="form-control">
+        <label for="location">Préfecture / Ville de la collecte *</label>
+        <select id="location" name="location" class="form-control" data-searchable data-search-placeholder="Rechercher une préfecture (ex: Conakry, Kindia)…">
           {% for r in regions %}
           <option value="{{ r }}" {% if r == default_location %}selected{% endif %}>
-            {% if r == 'Autre' %}Autre région / Diaspora{% else %}{{ r }}{% endif %}
+            {% if r == 'Autre' %}Autre / Diaspora{% else %}{{ r }}{% endif %}
           </option>
           {% endfor %}
         </select>
@@ -131,4 +131,8 @@
     </div>
   </section>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ static_url('js/searchable_select.js') }}"></script>
 {% endblock %}

@@ -10,28 +10,70 @@ from typing import Dict, List, Optional, Sequence, Tuple
 from app.core.config import settings
 
 
-# Controlled vocabularies shared across /contribuer, /speakers, and /sessions
+# All 33 prefectures of Guinea + Conakry (sorted alphabetically), followed by "Autre"
 GUINEA_REGIONS: Tuple[str, ...] = (
-    "Conakry",
-    "Kindia",
-    "Boké",
-    "Coyah",
-    "Dubréka",
-    "Forécariah",
+    "Beyla",
     "Boffa",
+    "Boké",
+    "Conakry",
+    "Coyah",
+    "Dabola",
+    "Dalaba",
+    "Dinguiraye",
+    "Dubréka",
+    "Faranah",
+    "Forécariah",
     "Fria",
+    "Gaoual",
+    "Guéckédou",
+    "Kankan",
+    "Kérouané",
+    "Kindia",
+    "Kissidougou",
+    "Koubia",
+    "Koundara",
+    "Kouroussa",
+    "Labé",
+    "Lélouma",
+    "Lola",
+    "Macenta",
+    "Mali",
+    "Mamou",
+    "Mandiana",
+    "Nzérékoré",
+    "Pita",
+    "Siguiri",
     "Télimélé",
+    "Tougué",
+    "Yomou",
     "Autre",
 )
 
+# Languages spoken in Guinea + vehicular languages (sorted alphabetically), followed by "Autre"
 NATIVE_LANGUAGES: Tuple[str, ...] = (
-    "Soussou",
-    "Pular",
-    "Malinké",
-    "Kissi",
-    "Guerzé (Kpelle)",
-    "Toma (Loma)",
+    "Anglais",
+    "Arabe",
+    "Badiaranké",
+    "Baga",
+    "Bassari",
+    "Coniagui",
+    "Djalonké",
     "Français",
+    "Guerzé (Kpelle)",
+    "Kissi",
+    "Kono",
+    "Kouranko",
+    "Landouma",
+    "Lele",
+    "Limba",
+    "Malinké",
+    "Manon",
+    "Mikiforé",
+    "Nalu",
+    "Pular",
+    "Soussou",
+    "Tenda",
+    "Toma (Loma)",
     "Autre",
 )
 
@@ -60,6 +102,29 @@ def normalize_choice(value: Optional[str], allowed: Sequence[str], default: str)
         return cleaned
     lower_map = {item.lower(): item for item in allowed}
     return lower_map.get(cleaned.lower(), default)
+
+
+def normalize_multi_choice(values: Optional[Sequence[str]], allowed: Sequence[str]) -> Optional[str]:
+    """Validate a multi-select list against an allowlist, deduplicate, sort and join by ', '."""
+    if not values:
+        return None
+    lower_map = {item.lower(): item for item in allowed}
+    order_index = {item: idx for idx, item in enumerate(allowed)}
+    selected: List[str] = []
+    seen = set()
+    for raw in values:
+        if not raw:
+            continue
+        # Support either individual list entries or comma-separated strings
+        for part in str(raw).split(","):
+            canon = lower_map.get(part.strip().lower())
+            if canon and canon not in seen:
+                seen.add(canon)
+                selected.append(canon)
+    if not selected:
+        return None
+    selected.sort(key=lambda item: order_index.get(item, 999))
+    return ", ".join(selected)
 
 
 @dataclass(frozen=True)

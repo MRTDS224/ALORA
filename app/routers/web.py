@@ -21,6 +21,7 @@ from app.core.languages import (
     NATIVE_LANGUAGES,
     TARGET_TASKS,
     normalize_choice,
+    normalize_multi_choice,
 )
 from app.core.security import (
     SESSION_COOKIE_NAME,
@@ -364,7 +365,7 @@ def handle_create_speaker(
     gender: str = Form("female"),
     region: str = Form("Conakry"),
     native_language: str = Form("Soussou"),
-    other_languages: Optional[str] = Form(None),
+    other_languages: Optional[List[str]] = Form(None),
     consent_status: str = Form("granted"),
     action: str = Form("save"),
     current_user: User = Depends(auth_service.require_web_roles(*COLLECTOR_ROLES)),
@@ -375,7 +376,7 @@ def handle_create_speaker(
     clean_region = normalize_choice(region, GUINEA_REGIONS, "Conakry")
     clean_native = normalize_choice(native_language, NATIVE_LANGUAGES, "Soussou")
     clean_consent = normalize_choice(consent_status, CONSENT_STATUSES, "granted")
-    clean_other = (other_languages.strip()[:200] or None) if other_languages else None
+    clean_other = normalize_multi_choice(other_languages, NATIVE_LANGUAGES)
 
     speaker_in = SpeakerCreate(
         age_group=clean_age,
