@@ -22,6 +22,7 @@ from app.models import User
 from app.schemas.prompt import PromptCreate, PromptUpdate
 from app.schemas.session import SessionCreate
 from app.schemas.speaker import SpeakerCreate
+from app.services import audit as audit_service
 from app.services import auth as auth_service
 from app.services import prompt as prompt_service
 from app.services import recording as recording_service
@@ -102,6 +103,13 @@ def handle_login(
 
     user = auth_service.authenticate_user(db, email=email, password=password)
     if not user:
+        audit_service.record_audit(
+            db=db,
+            action="auth.login_failed",
+            actor_email=email.strip().lower(),
+            target_type="auth",
+            ip_address=get_client_ip(request),
+        )
         return templates.TemplateResponse(
             request=request,
             name="login.html",
@@ -113,6 +121,14 @@ def handle_login(
             },
             status_code=401,
         )
+
+    audit_service.record_audit(
+        db=db,
+        action="auth.login_success",
+        actor=user,
+        target_type="auth",
+        ip_address=get_client_ip(request),
+    )
 
     safe_dest = next if (next.startswith("/") and not next.startswith("//")) else "/dashboard"
     if user.role == "collector" and safe_dest in {"/dashboard", "/admin/users"}:
@@ -169,6 +185,15 @@ def handle_create_user(
         created = auth_service.create_user(
             db=db, email=email, full_name=full_name, password=password, role=role
         )
+        audit_service.record_audit(
+            db=db,
+            action="user.create",
+            actor=current_user,
+            target_type="user",
+            target_id=created.id,
+            details={"email": created.email, "role": created.role},
+            ip_address=get_client_ip(request),
+        )
         success = f"Compte créé : {created.full_name} ({created.email}, rôle {created.role})."
     except ValueError as e:
         error = str(e)
@@ -184,14 +209,49 @@ def handle_create_user(
 
 @web_router.post("/admin/users/{user_id}/toggle")
 def handle_toggle_user(
+    request: Request,
     user_id: str,
     current_user: User = Depends(auth_service.require_web_roles(*ADMIN_ROLES)),
     db: Session = Depends(get_db),
 ):
     target_id = UUID(user_id)
     if target_id != current_user.id:
-        auth_service.toggle_user_active(db, target_id)
+        toggled = auth_service.toggle_user_active(db, target_id)
+        if toggled:
+            audit_service.record_audit(
+                db=db,
+                action="user.toggle",
+                actor=current_user,
+                target_type="user",
+                target_id=toggled.id,
+                details={"email": toggled.email, "is_active": toggled.is_active},
+                ip_address=get_client_ip(request),
+            )
     return RedirectResponse(url="/admin/users", status_code=303)
+
+
+# --- ADMIN AUDIT LOGS (ADMIN ONLY) ---
+@web_router.get("/admin/audit", response_class=HTMLResponse)
+def page_admin_audit(
+    request: Request,
+    action: Optional[str] = None,
+    actor_email: Optional[str] = None,
+    current_user: User = Depends(auth_service.require_web_roles(*ADMIN_ROLES)),
+    db: Session = Depends(get_db),
+):
+    logs = audit_service.list_audit_logs(db, action=action, actor_email=actor_email, limit=150)
+    available_actions = audit_service.list_distinct_actions(db)
+    return templates.TemplateResponse(
+        request=request,
+        name="admin_audit.html",
+        context={
+            "logs": logs,
+            "available_actions": available_actions,
+            "selected_action": action or "",
+            "selected_actor": actor_email or "",
+            "current_user": current_user,
+        },
+    )
 
 
 # --- ADMIN CONTACT MESSAGES (REVIEWER & ADMIN) ---
@@ -648,6 +708,14 @@ def handle_evaluate_recording(
         notes=notes,
     )
     quality_service.create_quality_annotation(db, qual_in, recording_status=target_status)
+    audit_service.record_audit(
+        db=db,
+        action=f"recording.{target_status}",
+        actor=current_user,
+        target_type="recording",
+        target_id=rec_uuid,
+        details={"audio_quality": audio_quality, "noise_level": noise_level},
+    )
     return RedirectResponse(url=f"/recordings/{recording_id}", status_code=303)
 
 

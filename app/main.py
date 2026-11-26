@@ -1,4 +1,6 @@
 import datetime
+import time
+import uuid
 from contextlib import asynccontextmanager
 from urllib.parse import quote
 
@@ -9,8 +11,13 @@ from fastapi.templating import Jinja2Templates
 
 from app.core.config import settings
 from app.core.database import SessionLocal
+from app.core.logging import configure_logging, get_logger
+from app.core.security import get_client_ip
 from app.services.auth import WebAuthRedirect, ensure_default_admin
 from app.services.storage import storage_service
+
+configure_logging()
+logger = get_logger("main")
 from app.routers.api_speakers import router as api_speakers_router
 from app.routers.api_sessions import router as api_sessions_router
 from app.routers.api_prompts import router as api_prompts_router
@@ -52,12 +59,53 @@ async def web_auth_redirect_handler(request: Request, exc: WebAuthRedirect):
 
 
 @app.middleware("http")
-async def add_security_headers(request: Request, call_next):
-    response = await call_next(request)
+async def add_security_headers_and_request_logging(request: Request, call_next):
+    req_id = uuid.uuid4().hex[:12]
+    t0 = time.perf_counter()
+    ip = get_client_ip(request)
+    try:
+        response = await call_next(request)
+    except Exception:
+        dur_ms = round((time.perf_counter() - t0) * 1000, 1)
+        logger.exception(
+            "Unhandled server error on %s %s",
+            request.method,
+            request.url.path,
+            extra={
+                "request_id": req_id,
+                "method": request.method,
+                "path": request.url.path,
+                "status_code": 500,
+                "duration_ms": dur_ms,
+                "ip": ip,
+            },
+        )
+        raise
+
+    dur_ms = round((time.perf_counter() - t0) * 1000, 1)
+    response.headers.setdefault("X-Request-ID", req_id)
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     response.headers.setdefault("Permissions-Policy", "camera=(), geolocation=(), microphone=(self)")
+
+    if not request.url.path.startswith("/static/"):
+        log_fn = logger.warning if response.status_code >= 400 else logger.info
+        log_fn(
+            "%s %s -> %s (%.1f ms)",
+            request.method,
+            request.url.path,
+            response.status_code,
+            dur_ms,
+            extra={
+                "request_id": req_id,
+                "method": request.method,
+                "path": request.url.path,
+                "status_code": response.status_code,
+                "duration_ms": dur_ms,
+                "ip": ip,
+            },
+        )
     return response
 
 
