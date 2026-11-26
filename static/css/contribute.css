@@ -548,3 +548,97 @@ body.cb {
   color: var(--night);
   text-decoration: underline;
 }
+
+/* ---------- Consignes & Guide visuel 3 étapes (/contribuer) ---------- */
+.cb-howto {
+  display: grid;
+  gap: 0.55rem;
+  margin-bottom: 0.85rem;
+  padding: 0.85rem;
+  border-radius: 14px;
+  background: #fbf7ef;
+  border: 1px solid #e6dbc8;
+}
+
+.cb-howto-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+}
+
+.cb-howto-num {
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #0f1a2b;
+  color: #f1c27d;
+  font-weight: 800;
+  font-size: 0.82rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+}
+
+.cb-howto-item strong {
+  display: block;
+  font-size: 0.92rem;
+  color: #0f1a2b;
+}
+
+.cb-howto-item span {
+  display: block;
+  font-size: 0.82rem;
+  color: #5a6373;
+  line-height: 1.35;
+}
+
+.cb-tips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 1.15rem;
+}
+
+.cb-tips span {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #2f7a58;
+  background: #e9f6ef;
+  border: 1px solid #c6e6d5;
+  padding: 0.28rem 0.6rem;
+  border-radius: 999px;
+}
+
+.cb-help-box {
+  margin-top: 0.85rem;
+  border-radius: 12px;
+  background: #fbf7ef;
+  border: 1px solid #e6dbc8;
+  padding: 0.6rem 0.85rem;
+  text-align: left;
+}
+
+.cb-help-box summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0f1a2b;
+  list-style: none;
+}
+
+.cb-help-box summary::-webkit-details-marker {
+  display: none;
+}
+
+.cb-help-content {
+  margin-top: 0.55rem;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: #374151;
+}
+
+.cb-help-content p + p {
+  margin-top: 0.45rem;
+}

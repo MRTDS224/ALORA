@@ -1,4 +1,5 @@
 from collections import Counter
+import random
 from typing import Any, Dict, List, Optional, Set
 from uuid import UUID
 from sqlalchemy.orm import Session
@@ -231,9 +232,19 @@ def get_next_prompt_for_session(
             "target_task": target_task,
         }
 
+    # Global recording count per prompt (balances corpus coverage across all 72+ prompts)
+    global_count_rows = (
+        db.query(Recording.prompt_id, func.count(Recording.id))
+        .filter(Recording.prompt_id.isnot(None))
+        .group_by(Recording.prompt_id)
+        .all()
+    )
+    global_counts: Dict[UUID, int] = {row[0]: int(row[1]) for row in global_count_rows if row[0] is not None}
+
     def priority_key(p: Prompt):
         topic_key = (p.topic or "").strip().lower()
         topic_usage = topic_counts.get(topic_key, 0) if topic_key else 0
+        global_usage = global_counts.get(p.id, 0)
 
         if target_task == "tts":
             type_rank = 0 if p.prompt_type == "sentence" else 1
@@ -253,10 +264,15 @@ def get_next_prompt_for_session(
                 type_rank = 3
                 media_rank = 1
 
-        return (type_rank, media_rank, topic_usage, p.prompt_code)
+        return (type_rank, media_rank, topic_usage, global_usage)
 
     unseen.sort(key=priority_key)
-    chosen = unseen[0]
+    # Pick randomly among the best-ranked tier (up to 6 candidates) so users get fresh variety
+    # while keeping corpus coverage balanced across all prompts.
+    best_type_media = (priority_key(unseen[0])[0], priority_key(unseen[0])[1])
+    same_tier = [p for p in unseen if (priority_key(p)[0], priority_key(p)[1]) == best_type_media]
+    pool_size = min(6, len(same_tier))
+    chosen = random.choice(same_tier[:pool_size])
 
     return {
         "prompt": chosen,

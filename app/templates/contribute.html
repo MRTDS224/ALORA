@@ -49,8 +49,39 @@
       <p class="cb-step-pill">Étape 1 sur 2 · Rapide et anonyme</p>
       <h1 id="onboardingTitle">Prêtez votre voix au soussou</h1>
       <p class="cb-intro">
-        Quelques choix simples pour aider la recherche. <strong>Votre nom n'est jamais demandé.</strong>
+        Quelques choix simples pour aider la recherche. <strong>Votre nom n'est jamais demandé</strong> et il n'y a <strong>pas besoin de savoir lire ou écrire</strong>.
       </p>
+
+      <!-- Mini-guide visuel en 3 gestes simples -->
+      <div class="cb-howto" aria-label="Comment participer en 3 étapes">
+        <div class="cb-howto-item">
+          <span class="cb-howto-num">1</span>
+          <div>
+            <strong>Regardez la photo</strong>
+            <span>Une scène simple du quotidien apparaît.</span>
+          </div>
+        </div>
+        <div class="cb-howto-item">
+          <span class="cb-howto-num">2</span>
+          <div>
+            <strong>Appuyez et parlez en soussou</strong>
+            <span>Racontez naturellement, comme à un proche (~15 s).</span>
+          </div>
+        </div>
+        <div class="cb-howto-item">
+          <span class="cb-howto-num">3</span>
+          <div>
+            <strong>Écoutez et envoyez</strong>
+            <span>Votre voix aide directement à créer l'IA du soussou.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="cb-tips" role="note">
+        <span>🔇 Endroit calme</span>
+        <span>📱 Téléphone à 15 cm</span>
+        <span>🔓 Cliquez « Autoriser » pour le micro</span>
+      </div>
 
       <form id="onboardingForm">
         <fieldset class="cb-fieldset">
@@ -147,6 +178,14 @@
           <li>Que font-ils ?</li>
           <li>Où est-ce ?</li>
         </ul>
+
+        <details class="cb-help-box">
+          <summary>Besoin d'aide ? Voir un exemple et les conseils</summary>
+          <div class="cb-help-content">
+            <p><strong>Exemple en soussou :</strong> <em>« Mɔxɔe na makiti kui, ginɛɛ na fɛɛrɛ ra, e na mangoe nun banaani matife... »</em> (Des gens sont au marché, des femmes vendent des mangues et des bananes…)</p>
+            <p><strong>Conseils rapides :</strong> parlez normalement sans vous presser, dans un endroit calme. Si le téléphone demande l'accès au microphone, appuyez sur <strong>Autoriser</strong>. Si une photo ne vous inspire pas, appuyez sur <strong>Passer</strong>.</p>
+          </div>
+        </details>
       </div>
 
       <!-- Zone Micro (1 seule action évidente à la fois) -->
@@ -218,9 +257,12 @@
     <section id="stepDone" class="cb-card" style="display: none; text-align: center;">
       <h2>I nu wali ! Merci infiniment !</h2>
       <p class="cb-intro">
-        Vous avez décrit toutes les photos disponibles pour le moment. Votre contribution aide directement à préserver et faire rayonner la langue soussou.
+        Vous avez vu toutes les photos disponibles pour le moment. Votre contribution aide directement à préserver et faire rayonner la langue soussou.
       </p>
-      <a href="/" class="cb-btn cb-btn-gold">Retour à l'accueil</a>
+      <div style="display: grid; gap: 0.65rem;">
+        <button type="button" id="cbResetSeenBtn" class="cb-btn cb-btn-gold">Revoir les photos passées</button>
+        <a href="/" class="cb-btn" style="background: #e5e7eb; color: #0f1a2b;">Retour à l'accueil</a>
+      </div>
     </section>
   </main>
 

@@ -9,6 +9,8 @@
   const HARD_MIN_SECONDS = 2.0;
   const TARGET_SECONDS = 15.0;
   const GAUGE_MAX = 30.0;
+  const SEEN_STORAGE_KEY = "alora_contrib_seen_v1";
+  const MAX_LOCAL_SEEN = 150;
 
   let currentPrompt = null;
   let mediaRecorder = null;
@@ -20,7 +22,36 @@
   let timerId = null;
   let audioCtx = null;
   let vuRaf = null;
-  const skippedIds = new Set();
+
+  function loadStoredSeen() {
+    try {
+      const raw = localStorage.getItem(SEEN_STORAGE_KEY);
+      if (!raw) return new Set();
+      const arr = JSON.parse(raw);
+      return new Set(Array.isArray(arr) ? arr.slice(-MAX_LOCAL_SEEN) : []);
+    } catch (_) {
+      return new Set();
+    }
+  }
+
+  function saveStoredSeen(set) {
+    try {
+      localStorage.setItem(SEEN_STORAGE_KEY, JSON.stringify(Array.from(set).slice(-MAX_LOCAL_SEEN)));
+    } catch (_) {}
+  }
+
+  const skippedIds = loadStoredSeen();
+
+  function markPromptSeen(id) {
+    if (!id) return;
+    skippedIds.add(id);
+    saveStoredSeen(skippedIds);
+  }
+
+  function clearPromptSeen() {
+    skippedIds.clear();
+    try { localStorage.removeItem(SEEN_STORAGE_KEY); } catch (_) {}
+  }
 
   const stepOnboarding = document.getElementById("stepOnboarding");
   const stepRecord = document.getElementById("stepRecord");
@@ -334,13 +365,14 @@
       });
       await refreshOfflineUI();
       btnSend.textContent = "Envoyer et voir la photo suivante →";
-      if (pId) skippedIds.add(pId);
+      if (pId) markPromptSeen(pId);
       await loadNextPhoto();
       return;
     }
 
     try {
       const data = await uploadPublicBlob(audioBlob, pId, durationSec);
+      if (pId) markPromptSeen(pId);
       updateCount(data.completed_count || 0);
       btnSend.textContent = "Envoyer et voir la photo suivante →";
       await loadNextPhoto();
@@ -405,18 +437,28 @@
 
   btnChangePerson.addEventListener("click", async () => {
     await fetch("/api/public/reset-profile", { method: "POST" });
-    skippedIds.clear();
+    clearPromptSeen();
     stepRecord.style.display = "none";
     stepDone.style.display = "none";
     stepOnboarding.style.display = "block";
   });
+
+  const btnResetSeen = document.getElementById("cbResetSeenBtn");
+  if (btnResetSeen) {
+    btnResetSeen.addEventListener("click", async () => {
+      clearPromptSeen();
+      stepDone.style.display = "none";
+      stepRecord.style.display = "block";
+      await loadNextPhoto();
+    });
+  }
 
   btnRecord.addEventListener("click", startRec);
   btnStop.addEventListener("click", stopRec);
   btnSend.addEventListener("click", sendRec);
   btnRetake.addEventListener("click", resetTake);
   btnSkip.addEventListener("click", () => {
-    if (currentPrompt) skippedIds.add(currentPrompt.id);
+    if (currentPrompt) markPromptSeen(currentPrompt.id);
     loadNextPhoto();
   });
   syncBtn.addEventListener("click", syncOfflinePublic);
