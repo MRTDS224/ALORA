@@ -55,6 +55,7 @@ class Session(Base):
     location = Column(String(100), nullable=True)
     environment = Column(String(100), nullable=True) # e.g. indoor, quiet_room, outdoor
     target_task = Column(String(20), nullable=False, default="asr") # asr (field/spontaneous) or tts (studio/scripted)
+    language = Column(String(20), nullable=False, default="sus", index=True) # ISO 639-3 language code (e.g., sus, fuf, emk)
     source = Column(String(30), nullable=False, default="field_agent") # field_agent or public_web
     device = Column(String(100), nullable=True)      # e.g. smartphone_mic, usb_mic
     collector = Column(String(100), nullable=True)

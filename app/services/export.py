@@ -121,19 +121,25 @@ def export_corpus_zip(
     db: Session,
     include_unvalidated: bool = False,
     target_task: Optional[str] = None,
+    language: Optional[str] = None,
 ) -> Tuple[bytes, str]:
     """
-    Generates a structured ZIP archive containing the Susu oral corpus formatted
+    Generates a structured ZIP archive containing the ALORA oral corpus formatted
     following WAXAL ASR_v2 best practices:
       - Filters out rejected/unvalidated audio by default
+      - Optional filtering by target_task ('asr'/'tts') and ISO 639-3 language code
       - Speaker-disjoint train/validation/test splits
       - Complete metadata CSVs, export_manifest.json, Praat TextGrids, and CC-BY-4.0 notice
     """
     rec_query = db.query(Recording)
     if not include_unvalidated:
         rec_query = rec_query.filter(Recording.recording_status.in_(VALIDATED_EXPORT_STATUSES))
-    if target_task:
-        rec_query = rec_query.join(SessionModel).filter(SessionModel.target_task == target_task)
+    if target_task or language:
+        rec_query = rec_query.join(SessionModel)
+        if target_task:
+            rec_query = rec_query.filter(SessionModel.target_task == target_task)
+        if language:
+            rec_query = rec_query.filter(SessionModel.language == language.strip().lower())
 
     recordings = rec_query.order_by(Recording.created_at.asc()).all()
 
@@ -290,6 +296,7 @@ def export_corpus_zip(
                 "include_unvalidated": include_unvalidated,
                 "included_statuses": "all" if include_unvalidated else sorted(VALIDATED_EXPORT_STATUSES),
                 "target_task": target_task or "all",
+                "language": (language.strip().lower() if language else "all"),
             },
             "speaker_disjoint": is_speaker_disjoint,
             "totals": {
@@ -341,6 +348,7 @@ You are free to share and adapt the material for any purpose, provided you give 
         zip_file.writestr("README_CORPUS.md", readme_text)
 
     zip_buffer.seek(0)
-    suffix = f"_{target_task}" if target_task else ""
-    filename = f"alora_susu_corpus{suffix}.zip"
+    lang_part = f"_{language.strip().lower()}" if language else ""
+    task_part = f"_{target_task}" if target_task else ""
+    filename = f"alora_corpus{lang_part}{task_part}.zip"
     return zip_buffer.getvalue(), filename

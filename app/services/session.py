@@ -28,6 +28,7 @@ def create_session(db: Session, session_in: SessionCreate) -> SessionModel:
         location=session_in.location,
         environment=session_in.environment,
         target_task=session_in.target_task or "asr",
+        language=(session_in.language or "sus").strip().lower(),
         source=session_in.source or "field_agent",
         device=session_in.device,
         collector=session_in.collector,

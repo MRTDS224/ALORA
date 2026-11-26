@@ -196,6 +196,7 @@ def get_next_prompt_for_session(
         raise ValueError("Session non trouvée")
 
     target_task = sess.target_task or "asr"
+    session_lang = (sess.language or "sus").strip().lower()
 
     # Prompts already recorded by this speaker across all sessions
     seen_rows = (
@@ -219,7 +220,12 @@ def get_next_prompt_for_session(
         if rec.prompt and rec.prompt.topic:
             topic_counts[rec.prompt.topic.strip().lower()] += 1
 
-    active_prompts = db.query(Prompt).filter(Prompt.active == True).all()
+    # Shared visual prompts ('mul') + language-specific prompts for this session
+    active_prompts = (
+        db.query(Prompt)
+        .filter(Prompt.active == True, Prompt.language.in_(["mul", session_lang]))
+        .all()
+    )
 
     skipped = set(exclude_ids or set())
     unseen = [p for p in active_prompts if p.id not in seen_prompt_ids and p.id not in skipped]
