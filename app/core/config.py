@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     ADMIN_FULL_NAME: str = "Administrateur ALORA"
     SESSION_MAX_AGE_SECONDS: int = 60 * 60 * 24 * 7  # 7 days
 
+    # Peer-review quorum for transcriptions & structured logging
+    TRANSCRIPTION_REQUIRED_APPROVALS: int = 2
+    LOG_LEVEL: str = "INFO"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

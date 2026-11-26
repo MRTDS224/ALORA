@@ -134,7 +134,9 @@ class Transcription(Base):
     transcription_type = Column(String(50), nullable=False, default="manual") # manual, automatic
     transcription_status = Column(String(50), nullable=False, default="draft") # draft, reviewed, final
     transcriber = Column(String(100), nullable=True)
+    author_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     reviewer = Column(String(100), nullable=True)
+    notes = Column(Text, nullable=True)
     confidence = Column(Float, nullable=True)
     version = Column(Integer, nullable=False, default=1)
     created_at = Column(DateTime(timezone=True), default=now_utc, nullable=False)
@@ -142,6 +144,24 @@ class Transcription(Base):
 
     recording = relationship("Recording", back_populates="transcriptions")
     word_annotations = relationship("WordAnnotation", back_populates="transcription")
+    reviews = relationship("TranscriptionReview", back_populates="transcription", cascade="all, delete-orphan")
+
+
+class TranscriptionReview(Base):
+    __tablename__ = "transcription_reviews"
+    __table_args__ = (
+        UniqueConstraint("transcription_id", "reviewer_user_id", name="uq_transcription_reviewer"),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=generate_uuid)
+    transcription_id = Column(UUID(as_uuid=True), ForeignKey("transcriptions.id", ondelete="CASCADE"), nullable=False, index=True)
+    reviewer_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    reviewer_name = Column(String(150), nullable=True)
+    decision = Column(String(30), nullable=False)  # approved, changes_requested
+    comment = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=now_utc, nullable=False)
+
+    transcription = relationship("Transcription", back_populates="reviews")
 
 
 class QualityAnnotation(Base):
@@ -205,3 +225,18 @@ class ContactMessage(Base):
     message = Column(Text, nullable=False)
     is_read = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(timezone=True), default=now_utc, nullable=False)
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=generate_uuid)
+    actor_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    actor_email = Column(String(255), nullable=True, index=True)
+    actor_role = Column(String(30), nullable=True)
+    action = Column(String(80), nullable=False, index=True)
+    target_type = Column(String(50), nullable=True)
+    target_id = Column(String(100), nullable=True)
+    details = Column(Text, nullable=True)  # Sanitized JSON metadata (never passwords/tokens)
+    ip_address = Column(String(64), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=now_utc, nullable=False, index=True)
