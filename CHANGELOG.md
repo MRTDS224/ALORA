@@ -10,7 +10,9 @@ Historique des principales évolutions de la plateforme **ALORA**.
 - **Logs structurés JSON & Journal d'audit (`/admin/audit`) :** middleware de traçage avec `X-Request-ID` (format JSON natif Google Cloud Logging), table `audit_logs` en écriture seule et interface de filtrage réservée aux administrateurs.
 - **Validation multiple des transcriptions (protocole pair-review WAXAL) :** table `transcription_reviews`, traçabilité `author_user_id`, interdiction stricte d'auto-validation (`403`), proposition de version corrigée créant automatiquement `v(n+1)` à valider par un pair, et promotion automatique en `accepted` au quorum configurable (`TRANSCRIPTION_REQUIRED_APPROVALS=2`).
 - **Visualisation & édition complète des prompts (`/prompts/{id}`) :** aperçu plein écran, modification des métadonnées et remplacement d'image, barre de recherche/filtres et suppression sécurisée.
-- **Consignes visuelles sur `/contribuer` :** mini-guide en 3 gestes simples, conseils terrain (calme, distance micro, autorisation) et exemple concret en soussou repliable.
+- **Consignes visuelles sur `/contribuer` :** mini-guide en 3 gestes simples, conseils terrain (calme, distance micro, autorisation) et question binaire langue maternelle (`Oui` / `Non`, pré-cochée).
+- **Extensibilité multi-langues :** registre central (`app/core/languages.py`), colonne `sessions.language`, prompts images partagés (`language="mul"`) et export filtrable par langue (`GET /api/export/corpus?language=sus`).
+- **Signalement de bugs intégré (public & équipe) :** modal léger « Signaler un bug » sur toutes les pages (`base.html` et `/contribuer`) avec capture automatique de la page/appareil, badge rouge dans `/admin/messages` et endpoint `POST /api/public/client-error` pour les erreurs micro navigateur.
 - **CI GitHub Actions & tests `pytest` isolés :** base dédiée `alora_db_test` + stockage temporaire (`/tmp`), pipeline PostgreSQL 18 + FFmpeg + Alembic + Docker.
 
 ### Amélioré

@@ -358,3 +358,82 @@ def test_transcription_multi_reviewer_peer_validation():
     assert r2.status_code == 200
     assert r2.json()["approvals_count"] == 2
     assert r2.json()["status"] == "accepted"
+
+
+def test_multilang_prompt_rotation_and_language_export():
+    cred = uuid.uuid4().hex
+    adm_email = f"admin_ml_{uuid.uuid4().hex[:6]}@alora.local"
+    db = SessionLocal()
+    try:
+        auth_service.create_user(db, adm_email, "Admin MultiLang", cred, role="admin")
+    finally:
+        db.close()
+
+    adm = TestClient(app)
+    assert adm.post("/login", data={"email": adm_email, "password": cred}, follow_redirects=False).status_code == 303
+
+    # Create a Susu sentence ('sus') and a shared multilingual image ('mul')
+    p_sus = adm.post(
+        "/api/prompts",
+        json={"prompt_type": "sentence", "title": "Phrase Susu Only", "content": "I kɛna", "language": "sus"},
+    ).json()
+    p_mul = adm.post(
+        "/api/prompts",
+        json={"prompt_type": "image", "title": "Image Partagée", "content": "Décrivez", "language": "mul"},
+    ).json()
+
+    # Create a Pular ('fuf') session -> should see 'mul' image, NEVER 'sus' sentence
+    spk = adm.post("/api/speakers", json={"age_group": "18-25", "gender": "male", "region": "Labé", "native_language": "Pular"}).json()
+    ses_fuf = adm.post("/api/sessions", json={"speaker_id": spk["id"], "target_task": "tts", "language": "fuf"}).json()
+    nxt = adm.get(f"/api/prompts/next?session_id={ses_fuf['id']}")
+    assert nxt.status_code == 200
+    chosen = nxt.json()["prompt"]
+    assert chosen is not None
+    assert chosen["id"] != p_sus["id"]
+    assert chosen["language"] in {"mul", "fuf"}
+
+    # Language-filtered export endpoint responds 200 with language in filename
+    exp = adm.get("/api/export/corpus?language=sus")
+    assert exp.status_code == 200
+    assert "alora_corpus_sus.zip" in exp.headers.get("content-disposition", "")
+
+
+def test_bug_report_public_and_staff_and_client_error():
+    cred = uuid.uuid4().hex
+    adm_email = f"admin_bug_{uuid.uuid4().hex[:6]}@alora.local"
+    db = SessionLocal()
+    try:
+        auth_service.create_user(db, adm_email, "Admin Bug", cred, role="admin")
+    finally:
+        db.close()
+
+    # 1. Anonymous bug report from /contribuer
+    pub = TestClient(app)
+    r_pub = pub.post(
+        "/api/public/bug-report",
+        json={"message": "Le micro ne s'ouvre pas sur Android", "page_url": "/contribuer"},
+    )
+    assert r_pub.status_code == 201
+
+    # 2. Client JS error beacon
+    r_err = pub.post(
+        "/api/public/client-error",
+        json={"context": "contribute_mic", "error_name": "NotAllowedError", "error_message": "Permission denied", "page_url": "/contribuer"},
+    )
+    assert r_err.status_code == 202
+
+    # 3. Logged-in staff bug report + verify both appear in /admin/messages
+    adm = TestClient(app)
+    assert adm.post("/login", data={"email": adm_email, "password": cred}, follow_redirects=False).status_code == 303
+    r_staff = adm.post(
+        "/api/public/bug-report",
+        json={"message": "Bouton de filtre lent sur /prompts", "page_url": "/prompts"},
+    )
+    assert r_staff.status_code == 201
+
+    inbox = adm.get("/admin/messages")
+    assert inbox.status_code == 200
+    assert "Bug / Problème" in inbox.text
+    assert "Bouton de filtre lent sur /prompts" in inbox.text
+    assert "micro ne s&#39;ouvre pas sur Android" in inbox.text
+    assert adm_email in inbox.text
