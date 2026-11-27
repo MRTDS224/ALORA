@@ -106,17 +106,35 @@ def stream_prompt_media(
     prompt = prompt_service.get_prompt_by_id(db, prompt_id)
     if not prompt or not prompt.media_object_key:
         raise HTTPException(status_code=404, detail="Image du prompt non trouvée")
+    object_key = str(prompt.media_object_key)
+    media_type = prompt.media_content_type or "image/jpeg"
+    # Release DB connection immediately before streaming image bytes
+    db.close()
 
     try:
-        stream = storage_service.get_object_stream(str(prompt.media_object_key))
-        media_type = prompt.media_content_type or "image/jpeg"
-        return StreamingResponse(
-            stream.stream(32768),
-            media_type=media_type,
-            headers={"Cache-Control": "public, max-age=86400"},
-        )
+        stream = storage_service.get_object_stream(object_key)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur de lecture image MinIO: {e}")
+
+    def _iter_chunks():
+        try:
+            yield from stream.stream(32768)
+        finally:
+            try:
+                stream.close()
+            except Exception:
+                pass
+            if hasattr(stream, "release_conn"):
+                try:
+                    stream.release_conn()
+                except Exception:
+                    pass
+
+    return StreamingResponse(
+        _iter_chunks(),
+        media_type=media_type,
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
 
 
 @router.post("/{prompt_id}/toggle", response_model=PromptRead, dependencies=[_collector_dep])

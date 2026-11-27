@@ -84,9 +84,27 @@ def stream_speaker_consent_audio(
     speaker = speaker_service.get_speaker_by_id(db, speaker_id)
     if not speaker or not speaker.consent_audio_object_key:
         raise HTTPException(status_code=404, detail="Audio de consentement non trouvé")
+    object_key = str(speaker.consent_audio_object_key)
+    # Release DB connection immediately before streaming audio bytes
+    db.close()
 
     try:
-        stream = storage_service.get_object_stream(str(speaker.consent_audio_object_key))
-        return StreamingResponse(stream.stream(32768), media_type="audio/wav")
+        stream = storage_service.get_object_stream(object_key)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur de lecture audio MinIO: {e}")
+
+    def _iter_chunks():
+        try:
+            yield from stream.stream(32768)
+        finally:
+            try:
+                stream.close()
+            except Exception:
+                pass
+            if hasattr(stream, "release_conn"):
+                try:
+                    stream.release_conn()
+                except Exception:
+                    pass
+
+    return StreamingResponse(_iter_chunks(), media_type="audio/wav")

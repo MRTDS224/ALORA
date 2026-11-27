@@ -73,7 +73,7 @@
             {% endif %}
           </td>
           <td>
-            <audio src="/api/recordings/{{ rec.id }}/stream" controls preload="metadata" style="height: 32px; max-width: 180px;"></audio>
+            <audio src="/api/recordings/{{ rec.id }}/stream" controls preload="none" style="height: 32px; max-width: 180px;"></audio>
           </td>
           <td>
             <span class="badge badge-{{ rec.recording_status }}">

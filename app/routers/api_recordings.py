@@ -91,13 +91,31 @@ def stream_audio(
     rec = recording_service.get_recording_by_id(db, recording_id)
     if not rec:
         raise HTTPException(status_code=404, detail="Enregistrement non trouvé")
+    object_key = str(rec.audio_object_key)
+    media_type = f"audio/{rec.format}" if rec.format else "audio/wav"
+    # Release DB connection immediately before streaming bytes from GCS/MinIO
+    db.close()
 
     try:
-        stream = storage_service.get_object_stream(str(rec.audio_object_key))
-        media_type = f"audio/{rec.format}" if rec.format else "audio/wav"
-        return StreamingResponse(stream.stream(32768), media_type=media_type)
+        stream = storage_service.get_object_stream(object_key)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur de lecture audio MinIO: {e}")
+
+    def _iter_chunks():
+        try:
+            yield from stream.stream(32768)
+        finally:
+            try:
+                stream.close()
+            except Exception:
+                pass
+            if hasattr(stream, "release_conn"):
+                try:
+                    stream.release_conn()
+                except Exception:
+                    pass
+
+    return StreamingResponse(_iter_chunks(), media_type=media_type)
 
 @router.post("/{recording_id}/validate", response_model=RecordingRead, dependencies=[_reviewer_dep])
 def validate_recording(
