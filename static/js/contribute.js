@@ -358,7 +358,8 @@
         }
       };
 
-      mediaRecorder.start(250);
+      // Avoid timeslice chunking (e.g. start(250)) which can emit corrupted fragmented MP4s on iOS WebKit
+      mediaRecorder.start();
       startVu(activeStream);
       startTime = Date.now();
       setUiState("recording");
